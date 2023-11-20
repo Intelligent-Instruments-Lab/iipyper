@@ -1,6 +1,6 @@
 # Audio WIP
 import sounddevice as sd
-import numpy as np
+# import numpy as np
 # import inspect
 
 class Audio:
