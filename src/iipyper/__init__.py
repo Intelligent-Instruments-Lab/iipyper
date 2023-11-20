@@ -1,118 +1,16 @@
 from threading import Thread
-from threading import Timer as _Timer
 import time
-from contextlib import contextmanager
 from numbers import Number
 
 import fire
 
+from .util import *
+from .timing import *
 from .midi import *
 from .osc import *
 from .audio import *
 from .tui import *
 from .state import _lock
-
-@contextmanager
-def profile(label, print=print):
-    t = time.perf_counter_ns()
-    yield None
-    dt = (time.perf_counter_ns() - t)*1e-9
-    print(f'{label}:\t {int(1000*dt)} ms')
-
-
-class Lag:
-    def __init__(self, coef_up, coef_down=None, val=None):
-        self.coef_up = coef_up
-        self.coef_down = coef_down or coef_up
-        self.val = val
-
-    def __call__(self, val):
-        if self.val is None:
-            self.val = val
-        else:
-            coef = self.coef_up if val > self.val else self.coef_down
-            self.val = self.val*coef + val*(1-coef)
-        return self.val
-    
-    def hpf(self, val):
-        return val - self(val)
-
-# class Clock:
-#     def __init__(self, tick=5e-4):
-#         self.begin = time.perf_counter()
-#         self.tick_len = tick
-
-#     def tick(self):
-#         # return the number of intervals since clock was started
-#         # print('tick')
-#         return int((time.perf_counter() - self.begin)/self.interval)
-
-#     def __call__(self, interval):
-#         """sleep for requested interval"""
-#         if interval<=0:
-#             time.sleep()
-#             return
-        
-#         self.interval = interval
-#         # sleep until it has been 1 more interval than before
-#         r = self.tick() + 1
-#         while self.tick() < r:
-#             time.sleep(self.tick_len)
-
-    # def __enter__(self):
-    #     self.mark = time.perf_counter()
-
-    # def __exit__(self, type, value, tb):
-    #     t = time.perf_counter()
-    #     self()
-
-class Stopwatch:
-    def __init__(self, punch=True):
-        self.t = None
-        if punch:
-            self.punch()
-
-    def punch(self, latency=0):
-        """return elapsed time since last punch, then punch
-        
-        Args:
-            latency: punch `latency` seconds in the past, 
-                unless it would be before the previous punch
-        """
-        t = time.perf_counter_ns() - latency
-        if self.t is None:
-            dt_ns = 0
-        else:
-            t = max(self.t, t)
-            dt_ns = t - self.t
-        self.t = t
-        return dt_ns * 1e-9
-
-    def read(self):
-        """return elapsed time since last punch"""
-        if self.t is None:
-            return self.punch()
-        return (time.perf_counter_ns() - self.t) * 1e-9
-
-def maybe_lock(f, lock):
-    if lock:
-        with _lock:
-            return f()
-    else:
-        return f()
-
-class Timer:
-    """a threading.Timer using the global iipyper lock around the timed function
-    also starts automatically by default.
-    """
-    def __init__(self, interval, f, lock=True, start=True, **kw):
-        self.timer = _Timer(max(0,interval), maybe_lock(f, lock), **kw)
-        if start:
-            self.start()
-    def cancel(self):
-        self.timer.cancel()
-    def start(self):
-        self.timer.start()
 
 _threads = []
 def repeat(interval=None, between_calls=False, lock=True, tick=5e-3):
@@ -192,11 +90,13 @@ def lock(f):
     return decorated
 
 def start_audio():
+    """start all audio streams"""
     for a in Audio.instances:
         if not a.stream.active:
             a.stream.start()
 
 def run(main=None):
+    """call this on your main function to run it as an iipyper app"""
     try:
         if main is not None:
             fire.Fire(main)
