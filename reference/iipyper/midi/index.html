@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+        <title>Midi - iipyper</title>
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../..">iipyper</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Reference <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Iipyper</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../__init__/" class="dropdown-item">  init  </a>
+</li>
+            
+<li>
+    <a href="../audio/" class="dropdown-item">Audio</a>
+</li>
+            
+<li>
+    <a href="./" class="dropdown-item active">Midi</a>
+</li>
+            
+<li>
+    <a href="../osc/" class="dropdown-item">Osc</a>
+</li>
+            
+<li>
+    <a href="../state/" class="dropdown-item">State</a>
+</li>
+            
+<li>
+    <a href="../tui/" class="dropdown-item">Tui</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../audio/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../osc/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="2"><a href="#iipyper.midi" class="nav-link">midi</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#iipyper.midi.MIDI" class="nav-link">MIDI</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="iipyper.midi"></a>
+  <div class="doc doc-contents first">
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="iipyper.midi.MIDI" class="doc doc-heading">
+          <code>MIDI</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+
+  
+      
+
+            <details class="quote">
+              <summary>Source code in <code>src/iipyper/midi.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 15</span>
+<span class="normal"> 16</span>
+<span class="normal"> 17</span>
+<span class="normal"> 18</span>
+<span class="normal"> 19</span>
+<span class="normal"> 20</span>
+<span class="normal"> 21</span>
+<span class="normal"> 22</span>
+<span class="normal"> 23</span>
+<span class="normal"> 24</span>
+<span class="normal"> 25</span>
+<span class="normal"> 26</span>
+<span class="normal"> 27</span>
+<span class="normal"> 28</span>
+<span class="normal"> 29</span>
+<span class="normal"> 30</span>
+<span class="normal"> 31</span>
+<span class="normal"> 32</span>
+<span class="normal"> 33</span>
+<span class="normal"> 34</span>
+<span class="normal"> 35</span>
+<span class="normal"> 36</span>
+<span class="normal"> 37</span>
+<span class="normal"> 38</span>
+<span class="normal"> 39</span>
+<span class="normal"> 40</span>
+<span class="normal"> 41</span>
+<span class="normal"> 42</span>
+<span class="normal"> 43</span>
+<span class="normal"> 44</span>
+<span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
+<span class="normal"> 53</span>
+<span class="normal"> 54</span>
+<span class="normal"> 55</span>
+<span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">MIDI</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;&quot;&quot;&quot;</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">print_ports</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Available MIDI inputs:&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">mido</span><span class="o">.</span><span class="n">get_input_names</span><span class="p">()):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Available MIDI outputs:&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">mido</span><span class="o">.</span><span class="n">get_output_names</span><span class="p">()):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">MIDI</span><span class="o">.</span><span class="n">ports_printed</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="n">ports_printed</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_ports</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out_ports</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                 <span class="n">virtual_in_ports</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">virtual_out_ports</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> 
+                 <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sleep_time</span><span class="o">=</span><span class="mf">5e-4</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            in_ports: list of input devices to open (uses all by default)</span>
+<span class="sd">            out_ports: list of output devices to open (uses none by default)</span>
+<span class="sd">            virtual_in_ports: number of &#39;To iipyper X&#39; ports to create</span>
+<span class="sd">            virtual_out_ports: number of &#39;From iipyper X&#39; ports to create</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">MIDI</span><span class="o">.</span><span class="n">ports_printed</span> <span class="ow">and</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">MIDI</span><span class="o">.</span><span class="n">print_ports</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">running</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sleep_time</span> <span class="o">=</span> <span class="n">sleep_time</span>
+        <span class="c1"># type -&gt; list[Optional[set[port], Optional[set[channel]], function]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_ports</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">in_ports</span> <span class="o">=</span> <span class="n">in_ports</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out_ports</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">out_ports</span> <span class="o">=</span> <span class="n">out_ports</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+
+        <span class="c1"># TODO: fuzzy match port names</span>
+
+        <span class="k">if</span> <span class="n">in_ports</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_ports</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">in_ports</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">mido</span><span class="o">.</span><span class="n">get_input_names</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_ports</span> <span class="o">=</span> <span class="p">{}</span>  
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">virtual_in_ports</span><span class="p">):</span>
+            <span class="n">virtual_in</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;To iipyper </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">in_ports</span><span class="p">[</span><span class="n">virtual_in</span><span class="p">]</span> <span class="o">=</span> <span class="n">mido</span><span class="o">.</span><span class="n">open_input</span><span class="p">(</span>
+                <span class="n">virtual_in</span><span class="p">,</span> <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">in_ports</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">in_ports</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="n">mido</span><span class="o">.</span><span class="n">open_input</span><span class="p">(</span>
+                    <span class="n">port</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_callback</span><span class="p">(</span><span class="n">port</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;WARNING: MIDI input </span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2"> not found&quot;&quot;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;opened MIDI input ports: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_ports</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+
+        <span class="c1">##### WIP</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">virtual_out_ports</span><span class="p">):</span>
+            <span class="n">virtual_out</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;From iipyper </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span><span class="p">[</span><span class="n">virtual_out</span><span class="p">]</span> <span class="o">=</span> <span class="n">mido</span><span class="o">.</span><span class="n">open_output</span><span class="p">(</span>
+                <span class="n">virtual_out</span><span class="p">,</span> <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">out_ports</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out_ports</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># if out_ports is None or len(out_ports)==0:</span>
+            <span class="c1"># out_ports = set(mido.get_output_names())  </span>
+        <span class="c1"># self.out_ports = {}</span>
+        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">out_ports</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="n">mido</span><span class="o">.</span><span class="n">open_output</span><span class="p">(</span><span class="n">port</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;WARNING: MIDI output </span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2"> not found&quot;&quot;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;opened MIDI output ports: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">running</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;MIDI handler decorator</span>
+
+<span class="sd">        Decorated function receives args:</span>
+<span class="sd">            msg: mido message</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+            <span class="c1"># bare decorator</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span>
+            <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;__call__&#39;</span><span class="p">)</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">filters</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># with filter arguments</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">{</span>
+                    <span class="s1">&#39;channel&#39;</span><span class="p">,</span> <span class="s1">&#39;port&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">,</span> 
+                    <span class="s1">&#39;note&#39;</span><span class="p">,</span> <span class="s1">&#39;velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">,</span> 
+                    <span class="s1">&#39;control&#39;</span><span class="p">,</span> <span class="s1">&#39;program&#39;</span>
+                    <span class="p">},</span> <span class="sa">f</span><span class="s1">&#39;unknown MIDI message filter &quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+            <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">_get_filter</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">kw</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">filters</span><span class="p">,</span> <span class="n">f</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">f</span>
+
+        <span class="k">return</span> <span class="n">decorator</span> <span class="k">if</span> <span class="n">f</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port_name</span><span class="p">):</span>
+        <span class="c1"># print(port_name)</span>
+        <span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg</span><span class="si">=}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">for</span> <span class="n">filters</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span><span class="p">:</span>
+                <span class="n">use_handler</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s1">&#39;port&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">filters</span> 
+                    <span class="ow">or</span> <span class="n">port_name</span> <span class="ow">in</span> <span class="n">filters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;port&#39;</span><span class="p">))</span>
+                <span class="n">use_handler</span> <span class="o">&amp;=</span> <span class="nb">all</span><span class="p">(</span>
+                    <span class="n">filt</span> <span class="ow">is</span> <span class="kc">None</span> 
+                    <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="ow">in</span> <span class="n">filt</span>
+                    <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">filt</span> <span class="ow">in</span> <span class="n">filters</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">use_handler</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="n">_lock</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">port_name</span><span class="p">)</span>
+                        <span class="n">f</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">callback</span>
+
+    <span class="k">def</span> <span class="nf">_send_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;send on a specific port or all output ports&quot;&quot;&quot;</span>
+        <span class="n">ports</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span><span class="p">[</span><span class="n">port</span><span class="p">]]</span>
+        <span class="c1"># print(ports)</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
+            <span class="c1"># print(&#39;iipyper send&#39;, m)</span>
+            <span class="c1"># iiuc mido send should already be thread safe</span>
+            <span class="c1"># with _lock:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+    <span class="c1"># # see https://mido.readthedocs.io/en/latest/message_types.html</span>
+
+    <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;send a mido message&quot;&quot;&quot;</span>
+        <span class="c1"># print(f&#39;SEND {time.perf_counter()}&#39;)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">mido</span><span class="o">.</span><span class="n">Message</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_send_msg</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;warning: extra arguments to MIDI send&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_send_msg</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="n">mido</span><span class="o">.</span><span class="n">Message</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;MIDI send failed: bad arguments to mido.Message&#39;</span><span class="p">)</span>
+                <span class="k">raise</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;MIDI send failed: first argument should be a mido.Message or str&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">==</span><span class="s1">&#39;cc&#39;</span><span class="p">:</span> <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;control_change&#39;</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">==</span><span class="s1">&#39;pc&#39;</span><span class="p">:</span> <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;program_change&#39;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="s1">&#39;note_on&#39;</span><span class="p">,</span> <span class="s1">&#39;note_off&#39;</span><span class="p">,</span> <span class="s1">&#39;polytouch&#39;</span><span class="p">,</span> <span class="s1">&#39;control_change&#39;</span><span class="p">,</span> 
+            <span class="s1">&#39;program_change&#39;</span><span class="p">,</span> <span class="s1">&#39;aftertouch&#39;</span><span class="p">,</span> <span class="s1">&#39;pitchwheel&#39;</span><span class="p">,</span> <span class="s1">&#39;sysex&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="k">lambda</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h3 id="iipyper.midi.MIDI.__init__" class="doc doc-heading">
+          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">in_ports</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out_ports</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">virtual_in_ports</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">virtual_out_ports</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sleep_time</span><span class="o">=</span><span class="mf">0.0005</span><span class="p">)</span></code>
+
+</h3>
+
+
+  <div class="doc doc-contents ">
+  
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>in_ports</code></td>
+          <td>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>list of input devices to open (uses all by default)</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>out_ports</code></td>
+          <td>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>list of output devices to open (uses none by default)</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>virtual_in_ports</code></td>
+          <td>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>number of 'To iipyper X' ports to create</p>
+            </div>
+          </td>
+          <td>
+                <code>1</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>virtual_out_ports</code></td>
+          <td>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>number of 'From iipyper X' ports to create</p>
+            </div>
+          </td>
+          <td>
+                <code>1</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>src/iipyper/midi.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span>
+<span class="normal">94</span>
+<span class="normal">95</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_ports</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out_ports</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+             <span class="n">virtual_in_ports</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">virtual_out_ports</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> 
+             <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sleep_time</span><span class="o">=</span><span class="mf">5e-4</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        in_ports: list of input devices to open (uses all by default)</span>
+<span class="sd">        out_ports: list of output devices to open (uses none by default)</span>
+<span class="sd">        virtual_in_ports: number of &#39;To iipyper X&#39; ports to create</span>
+<span class="sd">        virtual_out_ports: number of &#39;From iipyper X&#39; ports to create</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">MIDI</span><span class="o">.</span><span class="n">ports_printed</span> <span class="ow">and</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="n">MIDI</span><span class="o">.</span><span class="n">print_ports</span><span class="p">()</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">running</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sleep_time</span> <span class="o">=</span> <span class="n">sleep_time</span>
+    <span class="c1"># type -&gt; list[Optional[set[port], Optional[set[channel]], function]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_ports</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">in_ports</span> <span class="o">=</span> <span class="n">in_ports</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out_ports</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">out_ports</span> <span class="o">=</span> <span class="n">out_ports</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+
+    <span class="c1"># TODO: fuzzy match port names</span>
+
+    <span class="k">if</span> <span class="n">in_ports</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_ports</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">in_ports</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">mido</span><span class="o">.</span><span class="n">get_input_names</span><span class="p">())</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">in_ports</span> <span class="o">=</span> <span class="p">{}</span>  
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">virtual_in_ports</span><span class="p">):</span>
+        <span class="n">virtual_in</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;To iipyper </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_ports</span><span class="p">[</span><span class="n">virtual_in</span><span class="p">]</span> <span class="o">=</span> <span class="n">mido</span><span class="o">.</span><span class="n">open_input</span><span class="p">(</span>
+            <span class="n">virtual_in</span><span class="p">,</span> <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">in_ports</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">in_ports</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="n">mido</span><span class="o">.</span><span class="n">open_input</span><span class="p">(</span>
+                <span class="n">port</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_callback</span><span class="p">(</span><span class="n">port</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;WARNING: MIDI input </span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2"> not found&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;opened MIDI input ports: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_ports</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="c1">##### WIP</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">virtual_out_ports</span><span class="p">):</span>
+        <span class="n">virtual_out</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;From iipyper </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span><span class="p">[</span><span class="n">virtual_out</span><span class="p">]</span> <span class="o">=</span> <span class="n">mido</span><span class="o">.</span><span class="n">open_output</span><span class="p">(</span>
+            <span class="n">virtual_out</span><span class="p">,</span> <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">out_ports</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">out_ports</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># if out_ports is None or len(out_ports)==0:</span>
+        <span class="c1"># out_ports = set(mido.get_output_names())  </span>
+    <span class="c1"># self.out_ports = {}</span>
+    <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">out_ports</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="n">mido</span><span class="o">.</span><span class="n">open_output</span><span class="p">(</span><span class="n">port</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;WARNING: MIDI output </span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2"> not found&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;opened MIDI output ports: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_ports</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h3 id="iipyper.midi.MIDI.handle" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">handle</span><span class="p">(</span><span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span></code>
+
+</h3>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>MIDI handler decorator</p>
+
+<details class="decorated-function-receives-args" open>
+  <summary>Decorated function receives args</summary>
+  <p>msg: mido message</p>
+</details>
+          <details class="quote">
+            <summary>Source code in <code>src/iipyper/midi.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MIDI handler decorator</span>
+
+<span class="sd">    Decorated function receives args:</span>
+<span class="sd">        msg: mido message</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+        <span class="c1"># bare decorator</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;__call__&#39;</span><span class="p">)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">filters</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># with filter arguments</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">{</span>
+                <span class="s1">&#39;channel&#39;</span><span class="p">,</span> <span class="s1">&#39;port&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">,</span> 
+                <span class="s1">&#39;note&#39;</span><span class="p">,</span> <span class="s1">&#39;velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">,</span> 
+                <span class="s1">&#39;control&#39;</span><span class="p">,</span> <span class="s1">&#39;program&#39;</span>
+                <span class="p">},</span> <span class="sa">f</span><span class="s1">&#39;unknown MIDI message filter &quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+        <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">_get_filter</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">kw</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">filters</span><span class="p">,</span> <span class="n">f</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">f</span>
+
+    <span class="k">return</span> <span class="n">decorator</span> <span class="k">if</span> <span class="n">f</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h3 id="iipyper.midi.MIDI.send" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">send</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span></code>
+
+</h3>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>send a mido message</p>
+
+          <details class="quote">
+            <summary>Source code in <code>src/iipyper/midi.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;send a mido message&quot;&quot;&quot;</span>
+    <span class="c1"># print(f&#39;SEND {time.perf_counter()}&#39;)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">mido</span><span class="o">.</span><span class="n">Message</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_send_msg</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;warning: extra arguments to MIDI send&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_send_msg</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="n">mido</span><span class="o">.</span><span class="n">Message</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;MIDI send failed: bad arguments to mido.Message&#39;</span><span class="p">)</span>
+            <span class="k">raise</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;MIDI send failed: first argument should be a mido.Message or str&#39;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+
+
+
+  </div>
+
+  </div>
+
+</div></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../../js/jquery-3.6.0.min.js"></script>
+        <script src="../../../js/bootstrap.min.js"></script>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js"></script>
+        <script src="../../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
