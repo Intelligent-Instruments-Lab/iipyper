@@ -8,8 +8,6 @@ import fire
 
 from .midi import *
 from .osc import *
-from .maxmsp import *
-from .pd import *
 from .audio import *
 from .tui import *
 from .state import _lock
