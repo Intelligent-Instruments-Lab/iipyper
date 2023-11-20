@@ -5,7 +5,7 @@ try:
 
     from textual.app import App, ComposeResult
     from textual.reactive import reactive
-    from textual.widgets import Header, Footer, Static, Button, TextLog, Label
+    from textual.widgets import Header, Footer, Static, Button, RichLog, Label
     from textual.css.query import NoMatches, TooManyMatches
 
     class TUI(App):
@@ -18,7 +18,7 @@ try:
 
         def __init__(self):
             super().__init__()
-            self.std_log = TextLog(id='std_log')
+            self.std_log = RichLog(id='std_log')
 
         def compose(self) -> ComposeResult:
             """Create child widgets for the Textual App.
