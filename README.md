@@ -6,8 +6,6 @@ It is designed for creatives who want to explore the Python ecosystem and experi
 
 For examples and tutorials of how to use `iipyper`, see our [examples repo](https://github.com/intelligent-instruments-lab/iil-examples) (TBC).
 
-`iipyper` is developed by the [Intelligent Instruments Lab](https://iil.is). Connect us via the links at the bottom of [this page](https://intelligent-instruments-lab.github.io/iipyper/).
-
 ## Install
 
 `iipyper` can be installed via [PyPI](https://pypi.org/project/iipyper):
@@ -22,3 +20,18 @@ pip install iipyper
 git clone git@github.com:Intelligent-Instruments-Lab/iipyper.git
 pip install -e iipyper
 ```
+
+## Contact
+
+`iipyper` is developed by the [Intelligent Instruments Lab](https://iil.is/about). Get in touch to [collaborate](https://iil.is/collaborate):
+
+ ◦ <a href="https://iil.is" target="_blank" rel="noopener" title="Intelligent Instrumets Lab">iil.is</a> ◦ 
+<a href="https://facebook.com/intelligentinstrumentslab" target="_blank" rel="noopener" title="facebook.com">Facebook</a> ◦ 
+<a href="https://instagram.com/intelligentinstruments" target="_blank" rel="noopener" title="instagram.com">Instagram</a> ◦ 
+<a href="https://x.com/_iil_is" target="_blank" rel="noopener" title="x.com">X (Twitter)</a> ◦ 
+<a href="https://youtube.com/@IntelligentInstruments" target="_blank" rel="noopener" title="youtube.com">YouTube</a> ◦ 
+<a href="https://discord.gg/fY9GYMebtJ" target="_blank" rel="noopener" title="discord.gg">Discord</a> ◦ 
+<a href="https://github.com/intelligent-instruments-lab" target="_blank" rel="noopener" title="github.com">GitHub</a> ◦ 
+<a href="https://www.linkedin.com/company/intelligent-instruments-lab" target="_blank" rel="noopener" title="www.linkedin.com">LinkedIn</a> ◦ 
+<a href="mailto:iil@lhi.is" target="_blank" rel="noopener" title="">Email</a> ◦ 
+
