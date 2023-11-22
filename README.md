@@ -6,5 +6,4 @@ It is designed for creatives who want to explore the Python ecosystem and experi
 
 For examples and tutorials of how to use `iipyper`, see our [examples repo](https://github.com/intelligent-instruments-lab/iil-examples) (TBC).
 
-`iipyper` is developed by the [Intelligent Instruments Lab](https://iil.is). Connect with us via the links at the bottom of this page.
-
+`iipyper` is developed by the [Intelligent Instruments Lab](https://iil.is). Connect us via the links at the bottom of [this page](https://intelligent-instruments-lab.github.io/iipyper/).
