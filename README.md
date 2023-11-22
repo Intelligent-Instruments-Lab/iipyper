@@ -35,3 +35,6 @@ pip install -e iipyper
 <a href="https://www.linkedin.com/company/intelligent-instruments-lab" target="_blank" rel="noopener" title="www.linkedin.com">LinkedIn</a> ◦ 
 <a href="mailto:iil@lhi.is" target="_blank" rel="noopener" title="">Email</a> ◦ 
 
+## Funding
+
+The Intelligent Instruments project (INTENT) is funded by the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation programme (Grant agreement No. 101001848).
