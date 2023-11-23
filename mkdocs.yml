@@ -38,13 +38,13 @@ theme:
     - navigation.top
     - toc.follow
 
-copyright: ©️ Intelligent Instrumets Lab
+copyright: ©️ Intelligent Instruments Lab
 extra:
   generator: false
   social:
     - icon: material/link
       link: https://iil.is
-      name: Intelligent Instrumets Lab
+      name: Intelligent Instruments Lab
     - icon: material/email-outline
       link: mailto:iil@lhi.is
     - icon: fontawesome/brands/facebook
