@@ -325,7 +325,6 @@ class OSC():
                     if len(args) > 0:
                         if args[0] == 'ndarray':
                             args = ndarray_from_osc_args(*args)
-                            print(args)
                             ret = f(address, args)
                     else:
                         ret = f(address, *args, **kwargs)
