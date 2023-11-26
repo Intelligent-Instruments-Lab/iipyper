@@ -56,6 +56,62 @@ def do_json(d, k, json_keys, route):
             {type(e)} {e}
             """)
 
+def osc_blob_encode(data_bytes: bytes) -> bytes:
+    """Encode an OSC-compliant blob from bytes data."""
+    blob_size = len(data_bytes)
+    blob_size_packed = blob_size.to_bytes(4, byteorder='big')
+    padding_length = (4 - blob_size % 4) % 4
+    padding = b'\x00' * padding_length
+    return blob_size_packed + data_bytes + padding
+
+def osc_blob_decode(osc_blob: bytes) -> bytes:
+    """Decode data out of an OSC blob.
+
+    OSC blob format:
+        size: 32-bit big-endian integer (first 4 bytes).
+        data: binary blob data.
+        padding: zero-padding to make total size multiple of 4.
+    """
+    try:
+        if not isinstance(osc_blob, bytes) or len(osc_blob) < 4:
+            raise ValueError("OSC blob must be a bytes object with ≥4 bytes.")
+        size = int.from_bytes(osc_blob[:4], 'big')
+        if len(osc_blob) < 4 + size:
+            raise ValueError(f"OSC blob length ({len(osc_blob)}) < reported size {size}.")
+        return osc_blob[4:4+size]
+    except Exception as e:
+        raise ValueError(f"Error parsing OSC blob ({osc_blob}): {e}.")
+
+def parse_ndarray_args(*args) -> np.ndarray:
+    """Parse arguments into an ndarray.
+    
+    Args:
+        args: Variable length argument list, expected to contain
+            dtype (str), dimensions (int), and binary-encoded data (bytes).
+
+    Example:
+        >>> ndarray_args('float32', 100, 32, <12800 byte blob>)
+
+    Returns:
+        np.frombuffer(blob, dtype=dtype).reshape(shape)
+    """
+    if len(args) < 3:
+        raise ValueError(f"Minimum 3 args required; dtype(str), shape(int), data(bytes), got {len(args)}.")
+
+    dtype = args[0]
+    shape = args[1:-1]
+    blob = osc_blob_decode(args[-1])
+
+    if not isinstance(dtype, str):
+        raise ValueError(f"`dtype` must be a str, got {type(dtype)}")
+    if not all(isinstance(dim, int) for dim in shape):
+        raise ValueError(f"`shape` dims must be ints, got {shape}.")
+
+    try:
+        return np.frombuffer(blob, dtype=dtype).reshape(shape)
+    except ValueError as e:
+        raise ValueError(f"Couldn't parse args. Error: {e}")
+
 class OSC():
     """
     TODO: Handshake between server and clients
@@ -186,7 +242,20 @@ class OSC():
 
         if not route.startswith('/'):
             route = '/'+route
-        client.send_message(route, msg)
+
+        # handle numpy arrays
+        if len(msg) > 1 and isinstance(msg[0], np.ndarray):
+            raise ValueError(f"Found len(msg)>1 & type np.ndarray. Only 1 ndarray arg can be sent per message.")
+        elif len(msg) == 1 and isinstance(msg[0], np.ndarray):
+            arr = msg[0]
+            dtype = arr.dtype.name
+            shape = arr.shape
+            data = osc_blob_encode(arr.tobytes())
+            # print(msg, dtype, shape, data)
+            client.send_message(route, 'ndarray', dtype, *shape, data)
+        else:
+            client.send_message(route, msg)
+
         if self.verbose:
             print(f"OSC message sent {route}:{msg}")
 
@@ -228,6 +297,11 @@ class OSC():
                     kwargs = {}
 
                 with _lock:
+                    # handle numpy arrays
+                    if len(args) > 1 and isinstance(args[0], np.ndarray):
+                        raise ValueError(f"Found len(args)>1 & type np.ndarray. Only 1 ndarray arg can be received per message.")
+                    elif len(args) == 1 and isinstance(args[0], np.ndarray):
+                        args = parse_ndarray_args(args[0])
                     ret = f(address, *args, **kwargs)
                 if ret is not None:
                     self.return_to_sender_by_sender(ret, client, return_host, return_port)
@@ -303,7 +377,33 @@ class OSC():
         """
         return self._decorate(True, route, return_host, return_port, json_keys)
 
+    def ndarray(self, route=None, dformat:str=None, return_host=None, return_port=None):
+        """decorate a function as an ndarray OSC handler.
+
+        Args:
+            route: full OSC address
+            dformat: required data format of the ndarray (expects 'bytes' or 'json').
+                    bytes expects args:
+                        'ndarray', 'float32', 100, 32, <12800 byte blob>
+                    json expects kwargs:
+                        'ndarray': json_str
+
+        the decorated function should look like:
+        def f(route, ndarray):
+            ...
+        the OSC message will be parsed into an ndarray.
+        """
+        if dformat is None:
+            raise ValueError("Data format not specified (expected 'bytes'/'json').")
+        elif not isinstance(dformat, str):
+            raise ValueError(f"Data format should be str, got {type(dformat)}.")
+        elif dformat is 'bytes':
+            return self.args(False, route, return_host, return_port, None)
+        elif dformat is 'json':
+            return self.kwargs(False, route, return_host, return_port, ['ndarray'])
+        else:
+            raise ValueError(f"Invalid data format '{dformat}' (expected 'bytes'/'json').")
+
     def __call__(self, client, *a, **kw):
         """alternate syntax for `send` with client name first"""
         self.send(*a, client=client, **kw)
-
