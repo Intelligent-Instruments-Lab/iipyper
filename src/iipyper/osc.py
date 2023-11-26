@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Any
 import time
 import json
 from threading import Thread
@@ -11,6 +11,8 @@ from pythonosc.dispatcher import Dispatcher
 from pythonosc.udp_client import SimpleUDPClient
 
 from .state import _lock
+
+__all__ = ['OSC', 'ndarray_to_json', 'ndarray_from_json', 'osc_blob_encode', 'osc_blob_decode', 'ndarray_from_osc_args', 'ndarray_to_osc_args']
 
 # leaving this here for now. seems like it may not be useful since nested bundles
 # do not appear to work in sclang.
@@ -48,13 +50,33 @@ def do_json(d, k, json_keys, route):
         v = v[6:]
     if k in json_keys or has_prefix:
         try:
-            d[k] = json.loads(v)
+            data = json.loads(v)
+            if all(key in data for key in ('dtype','shape','data')):
+                # assume numpy array
+                data = ndarray_from_json(v)
+            d[k] = data
         except (TypeError, json.JSONDecodeError) as e:
             print(f"""
             warning: JSON decode failed for {route} argument "{k}": 
             value: {v}
             {type(e)} {e}
             """)
+
+def ndarray_to_json(array: np.ndarray) -> str:
+    array_list = array.tolist()
+    array_info = {
+        'data': array_list,
+        'dtype': str(array.dtype),
+        'shape': array.shape
+    }
+    return json.dumps(array_info)
+
+def ndarray_from_json(json_str: str) -> np.ndarray:
+    data = json.loads(json_str)
+    array_data = data['data']
+    dtype = data['dtype']
+    shape = data['shape']
+    return np.array(array_data, dtype=dtype).reshape(shape)
 
 def osc_blob_encode(data_bytes: bytes) -> bytes:
     """Encode an OSC-compliant blob from bytes data."""
@@ -82,8 +104,8 @@ def osc_blob_decode(osc_blob: bytes) -> bytes:
     except Exception as e:
         raise ValueError(f"Error parsing OSC blob ({osc_blob}): {e}.")
 
-def parse_ndarray_args(*args) -> np.ndarray:
-    """Parse arguments into an ndarray.
+def ndarray_from_osc_args(*args) -> np.ndarray:
+    """Parse OSC arguments into an ndarray.
     
     Args:
         args: Variable length argument list, expected to contain
@@ -98,6 +120,7 @@ def parse_ndarray_args(*args) -> np.ndarray:
     if len(args) < 3:
         raise ValueError(f"Minimum 3 args required; dtype(str), shape(int), data(bytes), got {len(args)}.")
 
+    args = args[1:] # skip 'ndarray' arg
     dtype = args[0]
     shape = args[1:-1]
     blob = osc_blob_decode(args[-1])
@@ -111,6 +134,13 @@ def parse_ndarray_args(*args) -> np.ndarray:
         return np.frombuffer(blob, dtype=dtype).reshape(shape)
     except ValueError as e:
         raise ValueError(f"Couldn't parse args. Error: {e}")
+
+def ndarray_to_osc_args(arr: np.ndarray) -> Tuple[Any, ...]:
+    """Encode an ndarray into OSC arguments."""
+    dtype = arr.dtype.name
+    shape = arr.shape
+    data = osc_blob_encode(arr.tobytes())
+    return ('ndarray', dtype, *shape, data)
 
 class OSC():
     """
@@ -247,14 +277,8 @@ class OSC():
         if len(msg) > 1 and isinstance(msg[0], np.ndarray):
             raise ValueError(f"Found len(msg)>1 & type np.ndarray. Only 1 ndarray arg can be sent per message.")
         elif len(msg) == 1 and isinstance(msg[0], np.ndarray):
-            arr = msg[0]
-            dtype = arr.dtype.name
-            shape = arr.shape
-            data = osc_blob_encode(arr.tobytes())
-            # print(msg, dtype, shape, data)
-            client.send_message(route, 'ndarray', dtype, *shape, data)
-        else:
-            client.send_message(route, msg)
+            msg = ndarray_to_osc_args(msg[0])
+        client.send_message(route, msg)
 
         if self.verbose:
             print(f"OSC message sent {route}:{msg}")
@@ -298,11 +322,13 @@ class OSC():
 
                 with _lock:
                     # handle numpy arrays
-                    if len(args) > 1 and isinstance(args[0], np.ndarray):
-                        raise ValueError(f"Found len(args)>1 & type np.ndarray. Only 1 ndarray arg can be received per message.")
-                    elif len(args) == 1 and isinstance(args[0], np.ndarray):
-                        args = parse_ndarray_args(args[0])
-                    ret = f(address, *args, **kwargs)
+                    if len(args) > 0:
+                        if args[0] == 'ndarray':
+                            args = ndarray_from_osc_args(*args)
+                            print(args)
+                            ret = f(address, args)
+                    else:
+                        ret = f(address, *args, **kwargs)
                 if ret is not None:
                     self.return_to_sender_by_sender(ret, client, return_host, return_port)
 
@@ -397,10 +423,10 @@ class OSC():
             raise ValueError("Data format not specified (expected 'bytes'/'json').")
         elif not isinstance(dformat, str):
             raise ValueError(f"Data format should be str, got {type(dformat)}.")
-        elif dformat is 'bytes':
-            return self.args(False, route, return_host, return_port, None)
-        elif dformat is 'json':
-            return self.kwargs(False, route, return_host, return_port, ['ndarray'])
+        elif dformat == 'bytes':
+            return self.args(route, return_host, return_port)
+        elif dformat == 'json':
+            return self.kwargs(route, return_host, return_port, ['ndarray'])
         else:
             raise ValueError(f"Invalid data format '{dformat}' (expected 'bytes'/'json').")
 
