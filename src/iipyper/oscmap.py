@@ -14,7 +14,8 @@ TODO: randomisation flag?
 TODO: Support class methods as send/receive funcs (handle 'self' arg)
 '''
 
-from .osc import OSC, OSCSendUpdater, OSCSend, OSCReceiveUpdater, OSCReceiveListUpdater
+from .osc import OSC
+from .update import OSCSendUpdater, OSCSend, OSCReceiveUpdater, OSCReceiveListUpdater
 from .maxmsp import MaxPatcher
 from .pd import PdPatcher
 
