@@ -1,25 +1,26 @@
 
-class Updater():
+class Updater:
     '''
     Rate-limited function call
     '''
 
-    def __init__(self, f, count=30):
+    def __init__(self, f, count=1):
         self.f = f
         self.count = count
         self.counter = 0
 
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         self.counter += 1
         if self.counter >= self.count:
-            self.f()
             self.counter = 0
+            return self.f(*args, **kwargs)
+        return None
 
 class ReceiveUpdater:
     '''
     Decouples event handling from updating
     Updating is rate-limited by a counter
-    TODO: Handle return to sender
+    TODO: Rename to ReceiveArgsUpdater?
     '''
 
     def __init__(self, f, state=None, count=5, update=False):
@@ -28,7 +29,6 @@ class ReceiveUpdater:
         self.counter = 0
         self.update = update
         self.state = state
-        self.ret = None
 
     def set(self, state):
         '''
