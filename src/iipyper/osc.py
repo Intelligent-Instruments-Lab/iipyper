@@ -104,16 +104,15 @@ def _consume_items(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
             hd = pickle.loads(hd)
 
     if cls is NDArray:
-        # interpret object-anotated strings as JSON
+        # interpret NDArrray-anotated strings as iipyper JSON or numpy repr format
         if isinstance(hd, str):
             if hd.startswith('array'):
                 hd = ndarray_from_repr(hd)
             else:
                 hd = ndarray_from_json(hd)
-        # interpret object-annotated blobs as pickled objects
+        # interpret NDArray-annotated blobs as raw float32 buffers
         elif isinstance(hd, bytes):
-            # pickle
-            hd = np.frombuffer(hd)
+            hd = np.frombuffer(hd, dtype=np.float32)
 
     #single item case: return the head, advance to first element of tail
     return hd, next(tl, None)
@@ -138,7 +137,6 @@ class OSC():
     """
     TODO: Handshake between server and clients
     TODO: Polling clients after handshake
-    TODO: Enqueuing and buffering messages (?)
     """
     def __init__(self, host="127.0.0.1", port=9999, verbose=True,
          concurrent=False):
@@ -353,7 +351,7 @@ class OSC():
                 if not given, reply to sender port.
                 NOTE: replying on the same port seems to work with SuperCollider,
                 but not with Max.
-            kwargs: if True (default), parse OSC message for 'key', value pairs
+            kwargs: if True (default), parse OSC message for key-value pairs
                 corresponding to named arguments of the decorated function.
 
         keyword arguments of the decorated function:
@@ -380,15 +378,16 @@ class OSC():
             or else to ensure that there will be no collision with the names
             of arguments to the decorated function, 
             for example by adding _ to your argument names.
-            you can also disable the keyword argument parsing with `kwargs=False`
+            you can also disable the keyword argument parsing with `kwargs=False`.
 
         type annotations:
             object:
-                decode a string from JSON
+                decode a string as JSON
                 decode bytes through pickle
 
             Splat[N]: 
-                consume N arguments into a tuple
+                consume N consecutive items from the OSC message items into a 
+                tuple, which forms one argument to the decorated function.
 
                 @osc.handle
                 f(a:Splat[2], b:Splat[3]) 
@@ -397,19 +396,24 @@ class OSC():
                 b = (2, 3, 4.5) 
 
             Splat[None]: 
-                consume arguments up to the next string into a list
-                NOTE: generally cannot be used with strings and must be used as
-                a keyword argument, since string types delimit the end of the 
+                consume items up to the next keyword item into a list
+                NOTE: generally should not be used when there are strings 
+                in the OSC message, and must be used as a keyword argument, 
+                since a str matching an argument name delimits the end of the
                 Splat (unless the Splat is the final argument).
 
                 f(a:Splat[None]) -- fine, collects all arguments into a list
-                f(a:Splat[None], b:Splat[None]=None) -- `a` can't contain strings, `b` can
+                f(a:Splat[None], b:Splat[None]=None) -- breaks if `a` should 
+                contain a string `'b'`.
+                    OSC message: /f a 0 1 2 b 3 4
+                    would call `f('/f', [0,1,2], [3,4])`.
 
             NDArray: 
                 decode a string (either JSON or repr format) to a numpy array
                     JSON format: see `iipyper.ndarray_to_json`
+                        (no support for complex dtypes)
                     repr format: see `numpy.array_repr`
-                decode bytes to a 1-dimensional float64 array
+                decode bytes to a 1-dimensional float32 array
                     TODO: support annotating dtype via pydantic_numpy types
 
             other types:
@@ -431,10 +435,31 @@ class OSC():
             # print(route)
             assert isinstance(route, str) and route.startswith('/')
 
+            # get info out of function signature
             sig = inspect.signature(f)
-            params = sig.parameters
-            params_list = list(params.values())
 
+            positional_params = []
+            named_params = {}
+            has_varp = False
+            has_varkw = True
+            pos = True
+            for name,p in sig.parameters.items():
+                if p.kind in (p.VAR_KEYWORD, p.VAR_KEYWORD):
+                    pos = False
+                else:
+                    named_params[name] = p
+                if pos:
+                    positional_params.append(p)
+                has_varp |= p.kind==p.VAR_POSITIONAL
+                has_varkw |= p.kind==p.VAR_KEYWORD
+
+            if has_varkw and not kwargs:
+                raise ValueError(f"""
+                ERROR: anguilla: OSC handler {f} was created with kwargs=False,
+                but the decorated function has a ** argument
+                """)
+
+            # wrap with pydantic validation decorator
             f = pydantic.validate_call(f)
 
             def handler(client, address, *osc_items):
@@ -450,17 +475,31 @@ class OSC():
                 kw = {}
 
                 def is_key(item):
-                    return kwargs and isinstance(item, str) and item in params
+                    # kwargs allowed
+                    # is a string
+                    # is the name of a parameter OR there is a ** argument
+                    return (
+                        kwargs 
+                        and isinstance(item, str) 
+                        and (item in named_params or has_varkw)
+                    )
 
+                # TODO: allow *a and **kw
+                # *a already works possibly?
+                # **kw: need is_key to trigger for str which aren't in params,
+                # but also can't be a positional arg?
                 try:
-                    # item = next(items)
                     _, item = _consume_items(None, items, None, is_key)
                     while item is not None:
-                        print(item, is_key(item))
+                        # print(item, is_key(item))
                         if is_key(item):
+                            ### interpret this item as the name of an argument
                             key = item
                             # print(f'{key=}')
-                            cls = params[item].annotation
+                            if item in named_params:
+                                cls = named_params[item].annotation
+                            else:
+                                cls = Any
                             try:
                                 value, item = _consume_items(
                                     next(items), items, cls, is_key)
@@ -470,12 +509,20 @@ class OSC():
                             kw[key] = value
                             position = -1 # no more positional arguments allowed
                         elif position>=0:
+                            ### interpret this item as a positional argument
                             # print(f'{position=}')
-                            cls = params_list[position].annotation
+                            if position < len(positional_params):
+                                cls = positional_params[position].annotation
+                            elif has_varp:
+                                cls = Any
+                            else:
+                                raise ValueError("""
+                                too many positional arguments.
+                                """)
                             if (
                                 cls is Splat[None] 
                                 and not kwargs 
-                                and position<len(params_list)-1
+                                and position<len(positional_params)-1
                                 ):
                                 raise ValueError("""
                                 Splat[None] can only be used on the last argument when kwargs=False.
@@ -498,22 +545,32 @@ class OSC():
                 # print(args)
                 # print(kw)
 
-                with _lock:
-                    r = f(address, *args, **kw)
-                # if there was a return value,
-                # send it as a message back to the sender
-                if r is not None:
-                    if not hasattr(r, '__len__'):
-                        print("""
-                        value returned from OSC handler should start with route
-                        """)
-                    else:
-                        client = (
-                            client[0] if return_host is None else return_host,
-                            client[1] if return_port is None else return_port
-                        )
-                        print(client, r)
-                        self.get_client_by_sender(client).send_message(r[0], r[1:])
+                try:
+                    with _lock:
+                        r = f(address, *args, **kw)
+                    # if there was a return value,
+                    # send it as a message back to the sender
+                    if r is not None:
+                        if not hasattr(r, '__len__'):
+                            print("""
+                            value returned from OSC handler should start with route
+                            """)
+                        else:
+                            client = (
+                                client[0] if return_host is None else return_host,
+                                client[1] if return_port is None else return_port
+                            )
+                            print(client, r)
+                            self.get_client_by_sender(client).send_message(r[0], r[1:])
+                            
+                except pydantic.ValidationError as e:
+                    print(f'ERROR: anguilla OSC handler:')
+                    for info in e.errors(include_url=False):
+                        msg = info['msg']
+                        loc = info['loc']
+                        inp = info['input']
+                        print(f'\t{inp.args} {inp.kwargs}')
+                        print(f'\t{msg} {loc}')
 
             self.add_handler(route, handler)
 
