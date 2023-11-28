@@ -472,16 +472,17 @@ class OSC():
                     address: full OSC address
                     *args: content of OSC message
                 """
+                # position of the next positional argument,
+                # -1 if no more are permitted
                 position = 0 if len(positional_params) or has_varp else -1
+
                 items = iter(osc_items)
                 args = []
                 kw = {}
 
+                # decide if an item represents the name of an argument,
+                # or is a positional argument or part of a Splat[None]
                 def is_key(item):
-                    # kwargs allowed
-                    # is a string
-                    # is the name of a parameter OR 
-                    #   there is a ** argument AND cannot be positional
                     # print(f"""
                     #     {kwargs=} 
                     #     and {isinstance(item, str)=} 
@@ -490,13 +491,11 @@ class OSC():
                     #         ))
                     #       """)
                     return (
-                        kwargs 
-                        and isinstance(item, str) 
-                        and (item in named_params or (
-                            has_varkw and position<0
-                            ))
+                        kwargs # named arguments enabled
+                        and isinstance(item, str) # can be a name
+                        and (item in named_params # is a known name
+                            or (has_varkw and position<0)) # or must be a ** arg
                     )
-
                 try:
                     _, item = _consume_items(None, items, None, is_key)
                     while item is not None:
