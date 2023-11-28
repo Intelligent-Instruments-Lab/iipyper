@@ -441,9 +441,12 @@ class OSC():
             positional_params = []
             named_params = {}
             has_varp = False
-            has_varkw = True
+            has_varkw = False
             pos = True
-            for name,p in sig.parameters.items():
+            for i,(name,p) in enumerate(sig.parameters.items()):
+                if i==0:
+                    # skip first argument (the OSC route)
+                    continue
                 if p.kind in (p.VAR_KEYWORD, p.VAR_KEYWORD):
                     pos = False
                 else:
@@ -455,7 +458,7 @@ class OSC():
 
             if has_varkw and not kwargs:
                 raise ValueError(f"""
-                ERROR: anguilla: OSC handler {f} was created with kwargs=False,
+                ERROR: iipyper: OSC handler {f} was created with kwargs=False,
                 but the decorated function has a ** argument
                 """)
 
@@ -469,7 +472,7 @@ class OSC():
                     address: full OSC address
                     *args: content of OSC message
                 """
-                position = 0
+                position = 0 if len(positional_params) or has_varp else -1
                 items = iter(osc_items)
                 args = []
                 kw = {}
@@ -477,17 +480,23 @@ class OSC():
                 def is_key(item):
                     # kwargs allowed
                     # is a string
-                    # is the name of a parameter OR there is a ** argument
+                    # is the name of a parameter OR 
+                    #   there is a ** argument AND cannot be positional
+                    # print(f"""
+                    #     {kwargs=} 
+                    #     and {isinstance(item, str)=} 
+                    #     and ({(item in named_params)=} or (
+                    #         {has_varkw=} and {(position<0)=}
+                    #         ))
+                    #       """)
                     return (
                         kwargs 
                         and isinstance(item, str) 
-                        and (item in named_params or has_varkw)
+                        and (item in named_params or (
+                            has_varkw and position<0
+                            ))
                     )
 
-                # TODO: allow *a and **kw
-                # *a already works possibly?
-                # **kw: need is_key to trigger for str which aren't in params,
-                # but also can't be a positional arg?
                 try:
                     _, item = _consume_items(None, items, None, is_key)
                     while item is not None:
@@ -564,7 +573,7 @@ class OSC():
                             self.get_client_by_sender(client).send_message(r[0], r[1:])
                             
                 except pydantic.ValidationError as e:
-                    print(f'ERROR: anguilla OSC handler:')
+                    print(f'ERROR: iipyper OSC handler:')
                     for info in e.errors(include_url=False):
                         msg = info['msg']
                         loc = info['loc']
