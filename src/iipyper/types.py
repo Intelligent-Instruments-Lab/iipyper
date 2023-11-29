@@ -1,11 +1,11 @@
-from typing import List, Tuple, TypeVar, Iterable, Any
+from typing import List, Tuple, TypeVar, Iterable, Any, Dict
 from typing_extensions import TypeAliasType
 import json
 
-import pydantic_numpy
 import numpy as np
 
-NDArray = pydantic_numpy.NpNDArray
+import pydantic_numpy
+from pydantic_numpy import NpNDArray as NDArray
 
 class _Splat(type):
     instances = {}

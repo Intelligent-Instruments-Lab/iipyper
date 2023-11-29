@@ -10,12 +10,12 @@ def profile(label, print=print):
     dt = (time.perf_counter_ns() - t)*1e-9
     print(f'{label}:\t {int(1000*dt)} ms')
 
-def maybe_lock(f, lock):
+def maybe_lock(f, lock, *a, **kw):
     if lock:
         with _lock:
-            return f()
+            return f(*a, **kw)
     else:
-        return f()
+        return f(*a, **kw)
 
 class Lag:
     def __init__(self, coef_up, coef_down=None, val=None):

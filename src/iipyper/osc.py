@@ -13,8 +13,8 @@ from pythonosc.udp_client import SimpleUDPClient
 
 import pydantic
 
-from .state import _lock
 from .types import *
+from .util import maybe_lock
 
 # leaving this here for now. seems like it may not be useful since nested bundles
 # do not appear to work in sclang.
@@ -117,21 +117,90 @@ def _consume_items(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
     #single item case: return the head, advance to first element of tail
     return hd, next(tl, None)
 
-# def do_json(d, k, json_keys, route):
-#     v = d[k]
-#     if not isinstance(v, str): return
-#     has_prefix = v.startswith('%JSON:')
-#     if has_prefix:
-#         v = v[6:]
-#     if k in json_keys or has_prefix:
-#         try:
-#             d[k] = json.loads(v)
-#         except (TypeError, json.JSONDecodeError) as e:
-#             print(f"""
-#             warning: JSON decode failed for {route} argument "{k}": 
-#             value: {v}
-#             {type(e)} {e}
-#             """)
+def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]:
+    """
+    convert a list of osc message contents to positional and keyword arguments
+    of t
+    """
+    positional_params, named_params, has_varp, has_varkw = sig_info
+
+    position = 0 if len(positional_params) or has_varp else -1
+
+    items = iter(osc_items)
+    args = []
+    kw = {}
+
+    # decide if an item represents the name of an argument,
+    # or is a positional argument or part of a Splat[None]
+    def is_key(item):
+        # print(f"""
+        #     {kwargs=} 
+        #     and {isinstance(item, str)=} 
+        #     and ({(item in named_params)=} or (
+        #         {has_varkw=} and {(position<0)=}
+        #         ))
+        #       """)
+        return (
+            kwargs # named arguments enabled
+            and isinstance(item, str) # can be a name
+            and (item in named_params # is a known name
+                or (has_varkw and position<0)) # or must be a ** arg
+        )
+    try:
+        _, item = _consume_items(None, items, None, is_key)
+        while item is not None:
+            # print(item, is_key(item))
+            if is_key(item):
+                ### interpret this item as the name of an argument
+                key = item
+                # print(f'{key=}')
+                if item in named_params:
+                    cls = named_params[item].annotation
+                else:
+                    cls = Any
+                try:
+                    value, item = _consume_items(
+                        next(items), items, cls, is_key)
+                except json.JSONDecodeError:
+                    print(f'JSON error decoding argument "{key}"')
+                    raise
+                kw[key] = value
+                position = -1 # no more positional arguments allowed
+            elif position>=0:
+                ### interpret this item as a positional argument
+                # print(f'{position=}')
+                if position < len(positional_params):
+                    cls = positional_params[position].annotation
+                elif has_varp:
+                    cls = Any
+                else:
+                    raise ValueError("""
+                    too many positional arguments.
+                    """)
+                if (
+                    cls is Splat[None] 
+                    and not kwargs 
+                    and position<len(positional_params)-1
+                    ):
+                    raise ValueError("""
+                    Splat[None] can only be used on the last argument when kwargs=False.
+                    """)
+                try:
+                    value, item = _consume_items(
+                        item, items, cls, is_key)
+                except json.JSONDecodeError:
+                    print('JSON error decoding argument', position)
+                    raise
+                args.append(value)
+                position += 1
+            else:
+                raise ValueError("""
+                positional argument after keyword arg while parsing OSC
+                """)
+    except StopIteration:
+        pass
+    return args, kw
+
 
 class OSC():
     """
@@ -265,70 +334,10 @@ class OSC():
         client.send_message(route, msg)
         if self.verbose:
             print(f"OSC message sent {route}:{msg}")
-
-    # def _decorate(self, use_kwargs, route, return_host, return_port, json_keys):
-    #     """generic decorator (args and kwargs cases)"""
-    #     if hasattr(route, '__call__'):
-    #         # bare decorator
-    #         f = route
-    #         route = None
-    #         json_keys = set()
-    #     else:
-    #         f = None
-    #         json_keys = set(json_keys or [])
-
-    #     def decorator(f, route=route, 
-    #             return_host=return_host, return_port=return_port, 
-    #             json_keys=json_keys):
-    #         # default_route = f'/{f.__name__}/*'
-    #         if route is None:
-    #             route = f'/{f.__name__}'
-    #         # print(route)
-    #         assert isinstance(route, str) and route.startswith('/')
-
-    #         def handler(client, address, *args):
-    #             """
-    #             Args:
-    #                 client: (host,port) of sender
-    #                 address: full OSC address
-    #                 *args: content of OSC message
-    #             """
-    #             # print('handler:', client, address)
-    #             if use_kwargs:
-    #                 kwargs = {k:v for k,v in zip(args[::2], args[1::2])}
-    #                 # JSON conversions
-    #                 for k in kwargs: 
-    #                     do_json(kwargs, k, json_keys, route)
-    #                 args = []
-    #             else:
-    #                 kwargs = {}
-
-    #             with _lock:
-    #                 r = f(address, *args, **kwargs)
-    #             # if there was a return value,
-    #             # send it as a message back to the sender
-    #             if r is not None:
-    #                 if not hasattr(r, '__len__'):
-    #                     print("""
-    #                     value returned from OSC handler should start with route
-    #                     """)
-    #                 else:
-    #                     client = (
-    #                         client[0] if return_host is None else return_host,
-    #                         client[1] if return_port is None else return_port
-    #                     )
-    #                     print(client, r)
-    #                     self.get_client_by_sender(client).send_message(r[0], r[1:])
-
-    #         self.add_handler(route, handler)
-
-    #         return f
-
-    #     return decorator if f is None else decorator(f)
     
     def handle(self, 
             route:str=None, return_host:str=None, return_port:int=None,
-            kwargs=True):
+            kwargs=True, lock=True):
         """
         OSC handler decorator supporting mixed args and kwargs, typing.
 
@@ -353,6 +362,8 @@ class OSC():
                 but not with Max.
             kwargs: if True (default), parse OSC message for key-value pairs
                 corresponding to named arguments of the decorated function.
+            lock: if True (default), use the global iipyper lock around the
+                decorated function
 
         keyword arguments of the decorated function:
             if a string with the same name as a parameter is found, 
@@ -472,90 +483,14 @@ class OSC():
                     address: full OSC address
                     *args: content of OSC message
                 """
-                # position of the next positional argument,
-                # -1 if no more are permitted
-                position = 0 if len(positional_params) or has_varp else -1
-
-                items = iter(osc_items)
-                args = []
-                kw = {}
-
-                # decide if an item represents the name of an argument,
-                # or is a positional argument or part of a Splat[None]
-                def is_key(item):
-                    # print(f"""
-                    #     {kwargs=} 
-                    #     and {isinstance(item, str)=} 
-                    #     and ({(item in named_params)=} or (
-                    #         {has_varkw=} and {(position<0)=}
-                    #         ))
-                    #       """)
-                    return (
-                        kwargs # named arguments enabled
-                        and isinstance(item, str) # can be a name
-                        and (item in named_params # is a known name
-                            or (has_varkw and position<0)) # or must be a ** arg
-                    )
-                try:
-                    _, item = _consume_items(None, items, None, is_key)
-                    while item is not None:
-                        # print(item, is_key(item))
-                        if is_key(item):
-                            ### interpret this item as the name of an argument
-                            key = item
-                            # print(f'{key=}')
-                            if item in named_params:
-                                cls = named_params[item].annotation
-                            else:
-                                cls = Any
-                            try:
-                                value, item = _consume_items(
-                                    next(items), items, cls, is_key)
-                            except json.JSONDecodeError:
-                                print(f'JSON error decoding argument "{key}"')
-                                raise
-                            kw[key] = value
-                            position = -1 # no more positional arguments allowed
-                        elif position>=0:
-                            ### interpret this item as a positional argument
-                            # print(f'{position=}')
-                            if position < len(positional_params):
-                                cls = positional_params[position].annotation
-                            elif has_varp:
-                                cls = Any
-                            else:
-                                raise ValueError("""
-                                too many positional arguments.
-                                """)
-                            if (
-                                cls is Splat[None] 
-                                and not kwargs 
-                                and position<len(positional_params)-1
-                                ):
-                                raise ValueError("""
-                                Splat[None] can only be used on the last argument when kwargs=False.
-                                """)
-                            try:
-                                value, item = _consume_items(
-                                    item, items, cls, is_key)
-                            except json.JSONDecodeError:
-                                print('JSON error decoding argument', position)
-                                raise
-                            args.append(value)
-                            position += 1
-                        else:
-                            raise ValueError("""
-                            positional argument after keyword arg while parsing OSC
-                            """)
-                except StopIteration:
-                    pass
-                    # print('end')
-                # print(args)
-                # print(kw)
+                args, kw = _parse_osc_items(
+                    osc_items, 
+                    (positional_params, named_params, has_varp, has_varkw), 
+                    kwargs
+                )
 
                 try:
-                    with _lock:
-                        r = f(address, *args, **kw)
+                    r = maybe_lock(f, lock, address, *args, **kw)
                     # if there was a return value,
                     # send it as a message back to the sender
                     if r is not None:
@@ -568,7 +503,7 @@ class OSC():
                                 client[0] if return_host is None else return_host,
                                 client[1] if return_port is None else return_port
                             )
-                            print(client, r)
+                            print('iipyper OSC return', client, r)
                             self.get_client_by_sender(client).send_message(r[0], r[1:])
                             
                 except pydantic.ValidationError as e:
@@ -581,7 +516,6 @@ class OSC():
                         print(f'\t{msg} {loc}')
 
             self.add_handler(route, handler)
-
             return f
 
         return decorator if f is None else decorator(f)
