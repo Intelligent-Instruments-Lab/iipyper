@@ -1,18 +1,20 @@
-from typing import Tuple, Any
 import time
 import json
+import pickle
+import inspect
+import typing
 from threading import Thread
-import numpy as np
 
-from pythonosc import osc_packet
+# from pythonosc import osc_packet
 # from pythonosc.osc_server import AsyncIOOSCUDPServer
 from pythonosc.osc_server import BlockingOSCUDPServer, ThreadingOSCUDPServer
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.udp_client import SimpleUDPClient
 
-from .state import _lock
+import pydantic
 
-__all__ = ['OSC', 'ndarray_to_json', 'ndarray_from_json', 'osc_blob_encode', 'osc_blob_decode', 'ndarray_from_osc_args', 'ndarray_to_osc_args']
+from .types import *
+from .util import maybe_lock
 
 # leaving this here for now. seems like it may not be useful since nested bundles
 # do not appear to work in sclang.
@@ -42,111 +44,168 @@ __all__ = ['OSC', 'ndarray_to_json', 'ndarray_from_json', 'osc_blob_encode', 'os
 #         except osc_packet.ParseError:
 #             pass
 
-def do_json(d, k, json_keys, route):
-    v = d[k]
-    if not isinstance(v, str): return
-    has_prefix = v.startswith('%JSON:')
-    if has_prefix:
-        v = v[6:]
-    if k in json_keys or has_prefix:
-        try:
-            data = json.loads(v)
-            if all(key in data for key in ('dtype','shape','data')):
-                # assume numpy array
-                data = ndarray_from_json(v)
-            d[k] = data
-        except (TypeError, json.JSONDecodeError) as e:
-            print(f"""
-            warning: JSON decode failed for {route} argument "{k}": 
-            value: {v}
-            {type(e)} {e}
-            """)
+def _consume_splat(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
+    params = typing.get_args(cls)
+    splat_items = []
 
-def ndarray_to_json(array: np.ndarray) -> str:
-    array_list = array.tolist()
-    array_info = {
-        'data': array_list,
-        'dtype': str(array.dtype),
-        'shape': array.shape
-    }
-    return json.dumps(array_info)
-
-def ndarray_from_json(json_str: str) -> np.ndarray:
-    data = json.loads(json_str)
-    array_data = data['data']
-    dtype = data['dtype']
-    shape = data['shape']
-    return np.array(array_data, dtype=dtype).reshape(shape)
-
-def osc_blob_encode(data_bytes: bytes) -> bytes:
-    """Encode an OSC-compliant blob from bytes data."""
-    blob_size = len(data_bytes)
-    blob_size_packed = blob_size.to_bytes(4, byteorder='big')
-    padding_length = (4 - blob_size % 4) % 4
-    padding = b'\x00' * padding_length
-    return blob_size_packed + data_bytes + padding
-
-def osc_blob_decode(osc_blob: bytes) -> bytes:
-    """Decode data out of an OSC blob.
-
-    OSC blob format:
-        size: 32-bit big-endian integer (first 4 bytes).
-        data: binary blob data.
-        padding: zero-padding to make total size multiple of 4.
-    """
-    try:
-        if not isinstance(osc_blob, bytes) or len(osc_blob) < 4:
-            raise ValueError("OSC blob must be a bytes object with ≥4 bytes.")
-        size = int.from_bytes(osc_blob[:4], 'big')
-        if len(osc_blob) < 4 + size:
-            raise ValueError(f"OSC blob length ({len(osc_blob)}) < reported size {size}.")
-        return osc_blob[4:4+size]
-    except Exception as e:
-        raise ValueError(f"Error parsing OSC blob ({osc_blob}): {e}.")
-
-def ndarray_from_osc_args(*args) -> np.ndarray:
-    """Parse OSC arguments into an ndarray.
+    if len(params)==0:
+        # print(cls)
+        # read until a string or end of iteration is encountered
+        while hd is not None and not is_key(hd):
+            splat_items.append(hd)
+            hd = next(tl, None)
+        return splat_items, hd
     
-    Args:
-        args: Variable length argument list, expected to contain
-            dtype (str), dimensions (int), and binary-encoded data (bytes).
+    elif len(params)==1:
+        # print(cls)
+        # read the annotated number of items
+        for _ in range(params[0]):
+            if hd is None:
+                raise ValueError(f"""
+                hit end of arguments while parsing {cls}
+                """)
+            splat_items.append(hd)
+            hd = next(tl, None)
+        return splat_items, hd
 
-    Example:
-        >>> ndarray_args('float32', 100, 32, <12800 byte blob>)
+    else:
+        raise TypeError
+    
+def _is_legacy_json_str(item):
+    if isinstance(item, str) and item.startswith('%JSON:'):
+        return item[6:], True
+    else:
+        return item, False
 
-    Returns:
-        np.frombuffer(blob, dtype=dtype).reshape(shape)
+def _consume_items(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
     """
-    if len(args) < 3:
-        raise ValueError(f"Minimum 3 args required; dtype(str), shape(int), data(bytes), got {len(args)}.")
+    Args:
+        hd: first element of items
+        tl: remaining items (an iterator)
+        cls: annotated type to consume
+        is_key: test if an item indicates an argument name
+    Returns:
+        instance of cls constructed from consumed items,
+        next item following those consumed (or None if end of iteration)
+    """
+    # consume groups of items annotated as Vector
+    if hasattr(cls, '__name__') and cls.__name__=='Splat':
+        return _consume_splat(hd, tl, cls, is_key)
+    
+    hd, is_legacy_json = _is_legacy_json_str(hd)
 
-    args = args[1:] # skip 'ndarray' arg
-    dtype = args[0]
-    shape = args[1:-1]
-    blob = osc_blob_decode(args[-1])
+    if cls is object or is_legacy_json:
+        # interpret object-anotated strings as JSON
+        if isinstance(hd, str):
+            hd = json.loads(hd)
+        # interpret object-annotated blobs as pickled objects
+        elif isinstance(hd, bytes):
+            # pickle
+            hd = pickle.loads(hd)
 
-    if not isinstance(dtype, str):
-        raise ValueError(f"`dtype` must be a str, got {type(dtype)}")
-    if not all(isinstance(dim, int) for dim in shape):
-        raise ValueError(f"`shape` dims must be ints, got {shape}.")
+    if cls is NDArray:
+        # interpret NDArrray-anotated strings as iipyper JSON or numpy repr format
+        if isinstance(hd, str):
+            if hd.startswith('array'):
+                hd = ndarray_from_repr(hd)
+            else:
+                hd = ndarray_from_json(hd)
+        # interpret NDArray-annotated blobs as raw float32 buffers
+        elif isinstance(hd, bytes):
+            hd = np.frombuffer(hd, dtype=np.float32)
 
+    #single item case: return the head, advance to first element of tail
+    return hd, next(tl, None)
+
+def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]:
+    """
+    convert a list of osc message contents to positional and keyword arguments
+    of t
+    """
+    positional_params, named_params, has_varp, has_varkw = sig_info
+
+    position = 0 if len(positional_params) or has_varp else -1
+
+    items = iter(osc_items)
+    args = []
+    kw = {}
+
+    # decide if an item represents the name of an argument,
+    # or is a positional argument or part of a Splat[None]
+    def is_key(item):
+        # print(f"""
+        #     {kwargs=} 
+        #     and {isinstance(item, str)=} 
+        #     and ({(item in named_params)=} or (
+        #         {has_varkw=} and {(position<0)=}
+        #         ))
+        #       """)
+        return (
+            kwargs # named arguments enabled
+            and isinstance(item, str) # can be a name
+            and (item in named_params # is a known name
+                or (has_varkw and position<0)) # or must be a ** arg
+        )
     try:
-        return np.frombuffer(blob, dtype=dtype).reshape(shape)
-    except ValueError as e:
-        raise ValueError(f"Couldn't parse args. Error: {e}")
+        _, item = _consume_items(None, items, None, is_key)
+        while item is not None:
+            # print(item, is_key(item))
+            if is_key(item):
+                ### interpret this item as the name of an argument
+                key = item
+                # print(f'{key=}')
+                if item in named_params:
+                    cls = named_params[item].annotation
+                else:
+                    cls = Any
+                try:
+                    value, item = _consume_items(
+                        next(items), items, cls, is_key)
+                except json.JSONDecodeError:
+                    print(f'JSON error decoding argument "{key}"')
+                    raise
+                kw[key] = value
+                position = -1 # no more positional arguments allowed
+            elif position>=0:
+                ### interpret this item as a positional argument
+                # print(f'{position=}')
+                if position < len(positional_params):
+                    cls = positional_params[position].annotation
+                elif has_varp:
+                    cls = Any
+                else:
+                    raise ValueError("""
+                    too many positional arguments.
+                    """)
+                if (
+                    cls is Splat[None] 
+                    and not kwargs 
+                    and position<len(positional_params)-1
+                    ):
+                    raise ValueError("""
+                    Splat[None] can only be used on the last argument when kwargs=False.
+                    """)
+                try:
+                    value, item = _consume_items(
+                        item, items, cls, is_key)
+                except json.JSONDecodeError:
+                    print('JSON error decoding argument', position)
+                    raise
+                args.append(value)
+                position += 1
+            else:
+                raise ValueError("""
+                positional argument after keyword arg while parsing OSC
+                """)
+    except StopIteration:
+        pass
+    return args, kw
 
-def ndarray_to_osc_args(arr: np.ndarray) -> Tuple[Any, ...]:
-    """Encode an ndarray into OSC arguments."""
-    dtype = arr.dtype.name
-    shape = arr.shape
-    data = osc_blob_encode(arr.tobytes())
-    return ('ndarray', dtype, *shape, data)
 
 class OSC():
     """
     TODO: Handshake between server and clients
     TODO: Polling clients after handshake
-    TODO: Enqueuing and buffering messages (?)
     """
     def __init__(self, host="127.0.0.1", port=9999, verbose=True,
          concurrent=False):
@@ -272,107 +331,195 @@ class OSC():
 
         if not route.startswith('/'):
             route = '/'+route
-
-        # handle numpy arrays
-        if len(msg) > 1 and isinstance(msg[0], np.ndarray):
-            raise ValueError(f"Found len(msg)>1 & type np.ndarray. Only 1 ndarray arg can be sent per message.")
-        elif len(msg) == 1 and isinstance(msg[0], np.ndarray):
-            msg = ndarray_to_osc_args(msg[0])
         client.send_message(route, msg)
-
         if self.verbose:
             print(f"OSC message sent {route}:{msg}")
+    
+    def handle(self, 
+            route:str=None, return_host:str=None, return_port:int=None,
+            kwargs=True, lock=True):
+        """
+        OSC handler decorator supporting mixed args and kwargs, typing.
 
-    def _decorate(self, use_kwargs, route, return_host, return_port, json_keys):
-        """generic decorator (args and kwargs cases)"""
+        The decorated function will receive the OSC route as its first argument.
+        Further arguments will be the elements of the OSC message, which can be
+        converted in various ways by supplying type annotations (see below).
+
+        If the decorated function returns a value, it should be a tuple beginning
+        with the OSC route to reply to, followed by the message contents.
+
+        Args:
+            route: OSC path for this handler. If not given,
+                use the name of the decorated function.
+                If this is a callable, assume the decorator is being used 'bare'
+                with all arguments set to default values, i.e. `osc.handle(f)`
+                is equivalent to `osc.handle()(f)`.
+            return_host: hostname of reply address for return value.
+                if not given, reply to sender.
+            return_port: port of reply address for return value.
+                if not given, reply to sender port.
+                NOTE: replying on the same port seems to work with SuperCollider,
+                but not with Max.
+            kwargs: if True (default), parse OSC message for key-value pairs
+                corresponding to named arguments of the decorated function.
+            lock: if True (default), use the global iipyper lock around the
+                decorated function
+
+        keyword arguments of the decorated function:
+            if a string with the same name as a parameter is found, 
+            the following item in the OSC message will be used as the value.
+            positional arguments can still be used before any keyword pairs,
+            like in Python.
+
+            Example:
+            ```
+            @osc.handle
+            def my_func(route, a, b, c=2, d=3):
+                print(f'{a=}, {b=}, {c=}, {d=}')
+            ```
+            OSC message: /my_func/ 0 1 2 'd' 3
+            prints: "a=0, b=1, c=2, d=3"
+
+            This is idiomatic in SuperCollider, where flat key, value pairs are
+            seen, e.g. `~synth.set('freq', 440, 'amp', 0.2)`
+            It's also often easier than managing nested data structures in Max/Pd.
+
+            However, there can be ambiguity when strings are positional arguments.
+            It's recommended to avoid using strings as positional arguments, 
+            or else to ensure that there will be no collision with the names
+            of arguments to the decorated function, 
+            for example by adding _ to your argument names.
+            you can also disable the keyword argument parsing with `kwargs=False`.
+
+        type annotations:
+            object:
+                decode a string as JSON
+                decode bytes through pickle
+
+            Splat[N]: 
+                consume N consecutive items from the OSC message items into a 
+                tuple, which forms one argument to the decorated function.
+
+                @osc.handle
+                f(a:Splat[2], b:Splat[3]) 
+                OSC Message: /f 0 banana 2 3 4.5
+                a = (0, banana)
+                b = (2, 3, 4.5) 
+
+            Splat[None]: 
+                consume items up to the next keyword item into a list
+                NOTE: generally should not be used when there are strings 
+                in the OSC message, and must be used as a keyword argument, 
+                since a str matching an argument name delimits the end of the
+                Splat (unless the Splat is the final argument).
+
+                f(a:Splat[None]) -- fine, collects all arguments into a list
+                f(a:Splat[None], b:Splat[None]=None) -- breaks if `a` should 
+                contain a string `'b'`.
+                    OSC message: /f a 0 1 2 b 3 4
+                    would call `f('/f', [0,1,2], [3,4])`.
+
+            NDArray: 
+                decode a string (either JSON or repr format) to a numpy array
+                    JSON format: see `iipyper.ndarray_to_json`
+                        (no support for complex dtypes)
+                    repr format: see `numpy.array_repr`
+                decode bytes to a 1-dimensional float32 array
+                    TODO: support annotating dtype via pydantic_numpy types
+
+            other types:
+                will be decoded by python-osc and validated by pydantic
+
+        """
         if hasattr(route, '__call__'):
             # bare decorator
             f = route
             route = None
-            json_keys = set()
         else:
             f = None
-            json_keys = set(json_keys or [])
 
         def decorator(f, route=route, 
-                return_host=return_host, return_port=return_port, 
-                json_keys=json_keys):
+                return_host=return_host, return_port=return_port):
             # default_route = f'/{f.__name__}/*'
             if route is None:
                 route = f'/{f.__name__}'
             # print(route)
             assert isinstance(route, str) and route.startswith('/')
 
-            def handler(client, address, *args):
+            # get info out of function signature
+            sig = inspect.signature(f)
+
+            positional_params = []
+            named_params = {}
+            has_varp = False
+            has_varkw = False
+            pos = True
+            for i,(name,p) in enumerate(sig.parameters.items()):
+                if i==0:
+                    # skip first argument (the OSC route)
+                    continue
+                if p.kind in (p.VAR_KEYWORD, p.VAR_KEYWORD):
+                    pos = False
+                else:
+                    named_params[name] = p
+                if pos:
+                    positional_params.append(p)
+                has_varp |= p.kind==p.VAR_POSITIONAL
+                has_varkw |= p.kind==p.VAR_KEYWORD
+
+            if has_varkw and not kwargs:
+                raise ValueError(f"""
+                ERROR: iipyper: OSC handler {f} was created with kwargs=False,
+                but the decorated function has a ** argument
+                """)
+
+            # wrap with pydantic validation decorator
+            f = pydantic.validate_call(f)
+
+            def handler(client, address, *osc_items):
                 """
                 Args:
                     client: (host,port) of sender
                     address: full OSC address
                     *args: content of OSC message
                 """
-                # print('handler:', client, address)
-                if use_kwargs:
-                    kwargs = {k:v for k,v in zip(args[::2], args[1::2])}
-                    # JSON conversions
-                    for k in kwargs: 
-                        do_json(kwargs, k, json_keys, route)
-                    args = []
-                else:
-                    kwargs = {}
+                args, kw = _parse_osc_items(
+                    osc_items, 
+                    (positional_params, named_params, has_varp, has_varkw), 
+                    kwargs
+                )
 
-                with _lock:
-                    # handle numpy arrays
-                    if len(args) > 0:
-                        if args[0] == 'ndarray':
-                            args = ndarray_from_osc_args(*args)
-                            ret = f(address, args)
-                    else:
-                        ret = f(address, *args, **kwargs)
-                if ret is not None:
-                    self.return_to_sender_by_sender(ret, client, return_host, return_port)
+                try:
+                    r = maybe_lock(f, lock, address, *args, **kw)
+                    # if there was a return value,
+                    # send it as a message back to the sender
+                    if r is not None:
+                        if not hasattr(r, '__len__'):
+                            print("""
+                            value returned from OSC handler should start with route
+                            """)
+                        else:
+                            client = (
+                                client[0] if return_host is None else return_host,
+                                client[1] if return_port is None else return_port
+                            )
+                            print('iipyper OSC return', client, r)
+                            self.get_client_by_sender(client).send_message(r[0], r[1:])
+                            
+                except pydantic.ValidationError as e:
+                    print(f'ERROR: iipyper OSC handler:')
+                    for info in e.errors(include_url=False):
+                        msg = info['msg']
+                        loc = info['loc']
+                        inp = info['input']
+                        print(f'\t{inp.args} {inp.kwargs}')
+                        print(f'\t{msg} {loc}')
 
             self.add_handler(route, handler)
-
             return f
 
         return decorator if f is None else decorator(f)
     
-    def return_to_sender_by_sender(self, return_to: tuple, sender: tuple, return_host=None, return_port=None):
-        '''
-        Args:
-            return_to: tuple of (route, *args) to send back to sender
-            client: (host,port) of sender
-            return_host: host to send back to, defaults to sender
-            return_port: port to send back to, defaults to sender
-        
-        Send return value as message back to sender by client(host,port).
-        '''
-        if not hasattr(return_to, '__len__'):
-            print(f"""
-            value returned from OSC handler should start with route, got: {return_to}
-            """)
-        else:
-            sender = (
-                sender[0] if return_host is None else return_host,
-                sender[1] if return_port is None else return_port
-            )
-            self.get_client_by_sender(sender).send_message(return_to[0], return_to[1:])
-
-    def return_to_sender_by_name(self, return_to: tuple, client_name: str):
-        '''
-        Args:
-            return_to: tuple of (route, *args) to send back to sender
-            client_name: name of client
-        
-        Send return value as message back to sender by name.
-        '''
-        if not hasattr(return_to, '__len__'):
-            print(f"""
-            value returned from OSC handler should start with route, got: {return_to}
-            """)
-        else:
-            self.get_client_by_name(client_name).send_message(return_to[0], return_to[1:])
-
     def args(self, route=None, return_host=None, return_port=None):
         """decorate a function as an args-style OSC handler.
 
@@ -382,7 +529,8 @@ class OSC():
         the OSC message will be converted to python types and passed as positional
         arguments.
         """
-        return self._decorate(False, route, return_host, return_port, None)
+        # return self._decorate(False, route, return_host, return_port, None)
+        return self.handle(route, return_host, return_port, kwargs=False)
 
     def kwargs(self, route=None, return_host=None, return_port=None, json_keys=None):
         """decorate a function as an kwargs-style OSC handler.
@@ -400,34 +548,13 @@ class OSC():
                 in the case that they arrive as strings.
                 alternatively, if a string starts with '%JSON:' it will be decoded.
         """
-        return self._decorate(True, route, return_host, return_port, json_keys)
-
-    def ndarray(self, route=None, dformat:str=None, return_host=None, return_port=None):
-        """decorate a function as an ndarray OSC handler.
-
-        Args:
-            route: full OSC address
-            dformat: required data format of the ndarray (expects 'bytes' or 'json').
-                    bytes expects args:
-                        'ndarray', 'float32', 100, 32, <12800 byte blob>
-                    json expects kwargs:
-                        'ndarray': json_str
-
-        the decorated function should look like:
-        def f(route, ndarray):
-            ...
-        the OSC message will be parsed into an ndarray.
-        """
-        if dformat is None:
-            raise ValueError("Data format not specified (expected 'bytes'/'json').")
-        elif not isinstance(dformat, str):
-            raise ValueError(f"Data format should be str, got {type(dformat)}.")
-        elif dformat == 'bytes':
-            return self.args(route, return_host, return_port)
-        elif dformat == 'json':
-            return self.kwargs(route, return_host, return_port, ['ndarray'])
-        else:
-            raise ValueError(f"Invalid data format '{dformat}' (expected 'bytes'/'json').")
+        if json_keys is not None:
+            raise ValueError("""
+            OSC.kwargs is deprecated. use OSC.handle and replace json_keys with
+            type annotation of function arguments as `object`.
+            """)
+        return self.handle(route, return_host, return_port)
+        # return self._decorate(True, route, return_host, return_port, json_keys)
 
     def __call__(self, client, *a, **kw):
         """alternate syntax for `send` with client name first"""
