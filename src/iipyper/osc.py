@@ -193,6 +193,9 @@ def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]
                     raise
                 args.append(value)
                 position += 1
+                # check if this was the final positional argument
+                if position >= len(positional_params) and not has_varp:
+                    position = -1
             else:
                 raise ValueError("""
                 positional argument after keyword arg while parsing OSC
