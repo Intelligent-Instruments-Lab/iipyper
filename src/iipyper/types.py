@@ -17,7 +17,7 @@ class _Splat(type):
             r = Splat
         else:
             N = TypeVar('N')
-            Splat = TypeAliasType('Splat', Tuple[*[Any]*n], type_params=(N,))
+            Splat = TypeAliasType('Splat', Tuple[(Any,)*n], type_params=(N,))
             r = Splat[n]
         _Splat.instances[n] = r
         return r
