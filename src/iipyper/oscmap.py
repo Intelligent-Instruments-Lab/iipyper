@@ -14,16 +14,17 @@ TODO: randomisation flag?
 TODO: Support class methods as send/receive funcs (handle 'self' arg)
 '''
 
+import os
+import json
+import xml.etree.ElementTree as ET
+import numpy as np
+from typing import Any, get_type_hints
+
+from .util import *
 from .osc import OSC
 from .update import OSCSendUpdater, OSCSend, OSCReceiveUpdater, OSCReceiveListUpdater
 from .maxmsp import MaxPatcher
 from .pd import PdPatcher
-
-from typing import Any, get_type_hints
-import os
-import xml.etree.ElementTree as ET
-import json
-import numpy as np
 
 class OSCMap:
     '''
@@ -396,18 +397,6 @@ class OSCMap:
             f.write(json_dict)
         print(f"Exported OSCMap to {self.patch_filepath}.json")
 
-    @staticmethod
-    def pascal_to_path(pascal_str):
-        return '/'+pascal_str.replace('_', '/')
-
-    @staticmethod
-    def path_to_pascal(path_str):
-        return path_str[1:].replace('/', '_')
-
-    @staticmethod
-    def pascal_to_camel(pascal_str):
-        return pascal_str[0].lower() + pascal_str[1:]
-
     def etree_to_dict(self, t):
         tag = self.pascal_to_camel(t.tag)
         d = {tag: {} if t.attrib else None}
@@ -435,7 +424,7 @@ class OSCMap:
     def xml_to_json(self, xml_str):
         e = ET.ElementTree(ET.fromstring(xml_str))
         return json.dumps(self.etree_to_dict(e.getroot()), indent=4)
-    
+
     def update(self):
         for k, v in self.dict['send'].items():
             if 'updater' in v:

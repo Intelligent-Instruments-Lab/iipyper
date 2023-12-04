@@ -33,3 +33,12 @@ class Lag:
     
     def hpf(self, val):
         return val - self(val)
+
+def pascal_to_path(pascal_str):
+    return '/'+pascal_str.replace('_', '/')
+
+def path_to_pascal(path_str):
+    return path_str[1:].replace('/', '_')
+
+def pascal_to_camel(pascal_str):
+    return pascal_str[0].lower() + pascal_str[1:]
