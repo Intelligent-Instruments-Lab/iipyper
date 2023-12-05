@@ -44,28 +44,38 @@ from .util import maybe_lock
 #         except osc_packet.ParseError:
 #             pass
 
+# can't use None for this since and argument value might be None
+class _Eos:
+    pass
+_eos = _Eos()
+
 def _consume_splat(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
+    # get length of Splat from type parameter
     params = typing.get_args(cls)
     splat_items = []
 
     if len(params)==0:
         # print(cls)
+        # Splat[None] case
         # read until a string or end of iteration is encountered
-        while hd is not None and not is_key(hd):
+        while hd is not _eos and not is_key(hd):
             splat_items.append(hd)
-            hd = next(tl, None)
+            # print(f'{splat_items=}')
+            hd = next(tl, _eos)
         return splat_items, hd
     
     elif len(params)==1:
         # print(cls)
+        # Splat[N] case
         # read the annotated number of items
         for _ in range(params[0]):
-            if hd is None:
+            if hd is _eos:
                 raise ValueError(f"""
                 hit end of arguments while parsing {cls}
                 """)
             splat_items.append(hd)
-            hd = next(tl, None)
+            # print(f'{splat_items=}')
+            hd = next(tl, _eos)
         return splat_items, hd
 
     else:
@@ -88,6 +98,8 @@ def _consume_items(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
         instance of cls constructed from consumed items,
         next item following those consumed (or None if end of iteration)
     """
+    # print(f'{hd=}, {tl=}, {cls=}')
+
     # consume groups of items annotated as Vector
     if hasattr(cls, '__name__') and cls.__name__=='Splat':
         return _consume_splat(hd, tl, cls, is_key)
@@ -115,7 +127,7 @@ def _consume_items(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
             hd = np.frombuffer(hd, dtype=np.float32)
 
     #single item case: return the head, advance to first element of tail
-    return hd, next(tl, None)
+    return hd, next(tl, _eos)
 
 def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]:
     """
@@ -148,7 +160,7 @@ def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]
         )
     try:
         _, item = _consume_items(None, items, None, is_key)
-        while item is not None:
+        while item is not _eos:
             # print(item, is_key(item))
             if is_key(item):
                 ### interpret this item as the name of an argument
@@ -177,6 +189,8 @@ def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]
                     raise ValueError("""
                     too many positional arguments.
                     """)
+                # print(f'{cls=}')
+                # print(position, positional_params)
                 if (
                     cls is Splat[None] 
                     and not kwargs 
@@ -313,6 +327,10 @@ class OSC():
             *msg: content
             client: name of client or None
         """
+        if len(self.clients)==0:
+            print('ERROR: iipyper: send: no OSC clients. use `create_client` to make one.')
+            return
+
         if client is not None:
             client = self.get_client_by_name(client)
         elif ':' in route:
@@ -461,7 +479,8 @@ class OSC():
                 if i==0:
                     # skip first argument (the OSC route)
                     continue
-                if p.kind in (p.VAR_KEYWORD, p.VAR_KEYWORD):
+                # print(p, p.kind)
+                if p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD):
                     pos = False
                 else:
                     named_params[name] = p
@@ -486,11 +505,13 @@ class OSC():
                     address: full OSC address
                     *args: content of OSC message
                 """
+                # print(f'{osc_items=}')
                 args, kw = _parse_osc_items(
                     osc_items, 
                     (positional_params, named_params, has_varp, has_varkw), 
                     kwargs
                 )
+                # print(f'{args=}, {kw=}')
 
                 try:
                     r = maybe_lock(f, lock, address, *args, **kw)
