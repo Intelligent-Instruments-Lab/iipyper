@@ -1,5 +1,6 @@
 import functools as ft
 import time
+from typing import Optional, List, Union
 
 import mido
 
@@ -13,7 +14,16 @@ def _get_filter(item):
     return {item}
 
 class MIDI:
-    """"""
+    """
+    iipyper MIDI object.
+    Create one of these and use it to make MIDI handlers and send MIDI:
+
+    midi = MIDI()
+    @midi.handle
+    def my_handler(msg):
+        ...
+    midi.send()
+    """
     @classmethod
     def print_ports(cls):
         print('Available MIDI inputs:')
@@ -26,9 +36,13 @@ class MIDI:
 
     ports_printed = False
 
-    def __init__(self, in_ports=None, out_ports=None, 
-                 virtual_in_ports=1, virtual_out_ports=1, 
-                 verbose=1, sleep_time=5e-4):
+    def __init__(self, 
+        in_ports:Optional[List[str]]=None, 
+        out_ports:Optional[List[str]]=None, 
+        virtual_in_ports:int=1, virtual_out_ports:int=1, 
+        verbose:int=1, 
+        # sleep_time:float=5e-4
+        ):
         """
         Args:
             in_ports: list of input devices to open (uses all by default)
@@ -42,7 +56,7 @@ class MIDI:
         self.running = False
 
         self.verbose = int(verbose)
-        self.sleep_time = sleep_time
+        # self.sleep_time = sleep_time
         # type -> list[Optional[set[port], Optional[set[channel]], function]
         self.handlers = []
 
@@ -100,8 +114,8 @@ class MIDI:
     def handle(self, *a, **kw):
         """MIDI handler decorator
         
-        Decorated function receives args:
-            msg: mido message
+        Decorated function receives arguments:
+            msg: [mido](https://mido.readthedocs.io/en/stable/messages/index.html) message
         """
         if len(a):
             # bare decorator
@@ -161,8 +175,21 @@ class MIDI:
 
     # # see https://mido.readthedocs.io/en/latest/message_types.html
 
-    def send(self, m, *a, port=None, **kw):
-        """send a mido message"""
+    def send(self, m:Union[str,mido.Message], *a, port:Optional[int]=None, **kw):
+        """
+        send a mido message as MIDI.
+
+        `midi.send(mido.Message('note_on', channel=0, note=0, velocity=64, time=0))`
+        or
+        `midi.send('note_on', channel=0, note=0, velocity=64, time=0)`
+        or
+        `midi.note_on(channel=0, note=0, velocity=64, time=0)`
+
+        Args:
+            m: a [mido](https://mido.readthedocs.io/en/stable/messages/index.html) message or message type
+            port: the MIDI port to send on 
+                (or sends on all open ports if not specified)
+        """
         # print(f'SEND {time.perf_counter()}')
         if isinstance(m, mido.Message):
             self._send_msg(port, m)

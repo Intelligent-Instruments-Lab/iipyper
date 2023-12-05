@@ -318,14 +318,14 @@ class OSC():
             self.create_client(f'{host}:{port}', host, port)
         return self.clients[address]
 
-    def send(self, route, *msg, client=None):
+    def send(self, route:str, *msg, client:Optional[str]=None):
         """
         Send message to default client, or with client in address
 
         Args:
-            address: '/my/osc/route' or 'host:port/my/osc/route'
-            *msg: content
-            client: name of client or None
+            route: e.g. '/my/osc/route' or 'host:port/my/osc/route'
+            *msg: contents of OSC message
+            client: name of OSC client or None to use default client
         """
         if len(self.clients)==0:
             print('ERROR: iipyper: send: no OSC clients. use `create_client` to make one.')
@@ -545,7 +545,9 @@ class OSC():
         return decorator if f is None else decorator(f)
     
     def args(self, route=None, return_host=None, return_port=None):
-        """decorate a function as an args-style OSC handler.
+        """DEPRECATED. use `handle` instead.
+        
+        decorate a function as an args-style OSC handler.
 
         the decorated function should look like:
         def f(route, my_arg, my_arg2, ...):
@@ -557,7 +559,9 @@ class OSC():
         return self.handle(route, return_host, return_port, kwargs=False)
 
     def kwargs(self, route=None, return_host=None, return_port=None, json_keys=None):
-        """decorate a function as an kwargs-style OSC handler.
+        """DEPRECATED. use `handle` instead.
+        
+        decorate a function as an kwargs-style OSC handler.
 
         the decorated function should look like:
         def f(route, my_key=my_value, ...):
@@ -580,8 +584,15 @@ class OSC():
         return self.handle(route, return_host, return_port)
         # return self._decorate(True, route, return_host, return_port, json_keys)
 
-    def __call__(self, client, *a, **kw):
-        """alternate syntax for `send` with client name first"""
+    def __call__(self, client:str, *a, **kw):
+        """
+        alternate syntax for `send` with client name first
+
+        `osc.send('my_client_name', 0, 1, 'message contents', None)`
+
+        Args:
+            client: name of OSC client created with `create_client`.
+        """
         self.send(*a, client=client, **kw)
 
 class Updater():

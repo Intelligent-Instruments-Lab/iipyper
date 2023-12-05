@@ -13,16 +13,21 @@ from .tui import *
 from .state import _lock
 
 _threads = []
-def repeat(interval=None, between_calls=False, lock=True, tick=5e-3):
-    """@repeat decorator
+def repeat(
+        interval:float=None, between_calls:bool=False, 
+        lock:bool=True, tick:float=5e-3):
+    """
+    Decorate a function to be called repeatedly in a loop.
     
     Args:
         interval: time in seconds to repeat at.
-            If the decorated function returns a number, use that as the interval
-            to the next call
+            If the decorated function returns a number, 
+            use that as the interval until the next call
         between_calls: if True, interval is between call and next call,
             if False, between return and next call
         lock: if True, use the global iipyper lock to make calls thread-safe
+        tick: minimum interval to sleep for 
+            (will spinlock for the remainder for more precise timing)
     """
     # close the decorator over interval and lock arguments
     def decorator(f):
@@ -71,7 +76,7 @@ def repeat(interval=None, between_calls=False, lock=True, tick=5e-3):
 _cleanup_fns = []
 # decorator to make a function run on KeyBoardInterrupt (before exit)
 def cleanup(f=None):
-    """@cleanup decorator"""
+    """Decorate a function to be called when the iipyper app exits."""
     def decorator(f):
         _cleanup_fns.append(f)
         return f

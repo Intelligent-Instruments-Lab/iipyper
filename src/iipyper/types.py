@@ -1,4 +1,4 @@
-from typing import List, Tuple, TypeVar, Iterable, Any, Dict
+from typing import List, Tuple, TypeVar, Iterable, Any, Dict, Optional, Union
 from typing_extensions import TypeAliasType
 import json
 
