@@ -18,11 +18,15 @@ class MIDI:
     iipyper MIDI object.
     Create one of these and use it to make MIDI handlers and send MIDI:
 
+    ```python
     midi = MIDI()
+
     @midi.handle
     def my_handler(msg):
-        ...
-    midi.send()
+        print(msg)
+
+    midi.note_on(channel=0, note=0, velocity=64, time=0)
+    ```
     """
     @classmethod
     def print_ports(cls):
@@ -112,10 +116,10 @@ class MIDI:
         self.running = True
 
     def handle(self, *a, **kw):
-        """MIDI handler decorator
+        """MIDI handler decorator.
         
-        Decorated function receives arguments:
-            msg: [mido](https://mido.readthedocs.io/en/stable/messages/index.html) message
+        Decorated function receives the following arguments:
+            `msg`: a [mido](https://mido.readthedocs.io/en/stable/messages/index.html) message
         """
         if len(a):
             # bare decorator
@@ -177,13 +181,15 @@ class MIDI:
 
     def send(self, m:Union[str,mido.Message], *a, port:Optional[int]=None, **kw):
         """
-        send a mido message as MIDI.
+        send a mido message as MIDI. 
+        
+        These are equivalent:
 
-        `midi.send(mido.Message('note_on', channel=0, note=0, velocity=64, time=0))`
-        or
-        `midi.send('note_on', channel=0, note=0, velocity=64, time=0)`
-        or
-        `midi.note_on(channel=0, note=0, velocity=64, time=0)`
+        ```python
+        midi.send(mido.Message('note_on', channel=0, note=0, velocity=64, time=0))
+        midi.send('note_on', channel=0, note=0, velocity=64, time=0)
+        midi.note_on(channel=0, note=0, velocity=64, time=0)
+        ```
 
         Args:
             m: a [mido](https://mido.readthedocs.io/en/stable/messages/index.html) message or message type

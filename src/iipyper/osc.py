@@ -221,11 +221,33 @@ def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]
 
 class OSC():
     """
-    TODO: Handshake between server and clients
-    TODO: Polling clients after handshake
+    iipyper OSC object.
+    Create one of these and use it to make OSC handlers and send OSC:
+
+    ```python
+    # make an OSC object receiving on port 9999
+    osc = OSC(port=9999)
+
+    # receive OSC messages at '/my_route'
+    @osc.handle
+    def my_route(route, *osc_items):
+        print(route, osc_items)
+
+    # with wildcard route and replies:
+    @osc.handle('my_wildcard_route/*')
+    def _(route, *osc_items):
+        print(route, osc_items)
+        # return value sends a reply
+        return '/echo' + route, *osc_items
+
+    # create an OSC client and send it a message
+    osc.create_client('my_client', host='127.0.0.1', port=8888)
+    osc.send('/my/osc/route', 0, 1.0, 'abc', client='my_client')
+    ```
     """
-    def __init__(self, host="127.0.0.1", port=9999, verbose=True,
-         concurrent=False):
+    def __init__(self, 
+        host:str="127.0.0.1", port:int=9999, 
+        verbose:bool=True, concurrent:bool=False):
         """
         TODO: Expand to support multiple IPs + ports
 
@@ -285,12 +307,12 @@ class OSC():
         # if (self.server is not None):
         self.dispatcher.map(address, handler, needs_reply_address=True)
 
-    def create_client(self, name, host=None, port=None):
+    def create_client(self, name:str, host:Optional[str]=None, port:Optional[int]=None):
         """
         Add an OSC client.
         Args:
             name: name this client
-            host (int): IP to send to, defaults to same as server
+            host (str): IP to send to, defaults to same as server
             port (int): port to send to, defaults to 57120 (supercollider)
         """
         if (host == None):
@@ -588,7 +610,7 @@ class OSC():
         """
         alternate syntax for `send` with client name first
 
-        `osc.send('my_client_name', 0, 1, 'message contents', None)`
+        `osc('my_client_name', 0, 1, 'message contents', None)`
 
         Args:
             client: name of OSC client created with `create_client`.
