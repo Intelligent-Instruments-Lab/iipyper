@@ -133,7 +133,7 @@ class OSCMap:
     
     def add_send_args_to_patcher(self, func):
         f = self.dict['send'][func.__name__]
-        self.patcher.add_send_args_func(f)
+        self.patcher.send_args_func(f)
 
     '''
     send list
@@ -175,7 +175,7 @@ class OSCMap:
     
     def add_send_list_to_patcher(self, func):
         f = self.dict['send'][func.__name__]
-        self.patcher.add_send_list_func(f)
+        self.patcher.send_list_func(f)
 
     '''
     send kwargs
@@ -213,7 +213,7 @@ class OSCMap:
 
     def add_receive_args_to_patcher(self, func):
         f = self.dict['receive'][func['name']]
-        self.patcher.add_receive_args_func(f)
+        self.patcher.receive_args_func(f)
 
     def receive_args_inline(self, name: str, receiver_func, **kwargs):
         kwargs = {**kwargs, **{'count': 1, 'name': name}}
@@ -260,7 +260,7 @@ class OSCMap:
     
     def add_receive_list_to_patcher(self, func):
         f = self.dict['receive'][func['name']]
-        self.patcher.add_receive_list_func(f)
+        self.patcher.receive_list_func(f)
     
     def receive_list_with_idx(self, name: str, receiver, idx_len: int, vec_len: int, attr=None):
         '''
