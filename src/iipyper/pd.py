@@ -132,10 +132,10 @@ class PdPatcher:
         if len(f_p) == 0:
             self.add_osc_receive_msg(self.r_x, self.r_y, f['address'])
         else:
-            for i, p in enumerate(f_p):
-                p_def, p_min, p_max = f_p[p][0], f_p[p][1], f_p[p][2]
+            for k, p in f_p.items():
+                p_def, p_min, p_max = f_p[k][0], f_p[k][1], f_p[k][2]
                 params.append({
-                    "label":   p,     "data": hints[i].__name__, 
+                    "label":   k,     "data": hints[k].__name__, 
                     "min_val": p_min, "size": p_max-p_min
                 })
             self.add_osc_receive_with_controls(self.r_x, self.r_y, f['address'], params)
@@ -151,15 +151,16 @@ class PdPatcher:
         hints = typing.get_type_hints(f['f'])
         f_p = f['params']
         params = []
+        print(f"[iipyper.pd.add_receive_args_func] name:{f['name']} p:{type(f_p)}")
         if len(f_p) == 0:
             self.add_osc_send_msg(self.s_x, self.s_y, f['address'])
         else:
-            for p in f_p:
+            for k, p in f_p.items():
                 # TODO: handle strings
                 if isinstance(p, str): continue
-                p_def, p_min, p_max = f_p[p][0], f_p[p][1], f_p[p][2]
+                p_def, p_min, p_max = f_p[k][0], f_p[k][1], f_p[k][2]
                 params.append({
-                    "label":   p,     "data": hints[p].__name__, 
+                    "label":   k,     "data": hints[k].__name__, 
                     "min_val": p_min, "size": p_max-p_min
                 })
             self.add_osc_send_with_controls(self.s_x, self.s_y, f['address'], params)
