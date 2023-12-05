@@ -39,6 +39,7 @@ class PdPatcher:
     def init(self):
         self.w = 5.5 # default width (scaling factor)
         self.h = 27.0 # default height (pixels)
+        self.line = 100 # default [line] (timed ramp generator) time in milliseconds
         self.param_width = 70
         self.s_x, self.s_y = 30, 30 # sends insertion point
         self.r_x, self.r_y = 30, 530 # receives insertion point
@@ -278,6 +279,7 @@ class PdPatcher:
 
         # sliders
         slider_ids, slider_float_ids, int_ids, tbf_ids, _y_off = self.sliders(x, y+y_off, parameters, "send")
+        y_off+=self.h # line
         y_off+=_y_off+25
         y_off+=225
 
@@ -326,7 +328,7 @@ class PdPatcher:
     sliders
     """
 
-    def sliders(self, x, y, sliders, io=None, line:int=None):
+    def sliders(self, x, y, sliders, io=None):
         assert io is not None, "io must be \"send\" or \"receive\""
         '''
         sliders = [
@@ -338,7 +340,7 @@ class PdPatcher:
         int_ids = []
         tbf_ids = []
         y_off = 0
-        send_rate_id = self.object("r rate", x-50, y+155)
+        send_rate_id = self.object("r rate", x-50, y+155+self.h)
         for i, s in enumerate(sliders):
             y_off = 0
             x_i = x+(i*self.param_width)
@@ -358,7 +360,10 @@ class PdPatcher:
 
     def slider(self, send_rate_id, x, y, min_val, size, float=False, io=None):
         assert io is not None, "io must be \"send\" or \"receive\""
+        line_id = self.object(f"line 0 {self.line}", x, y)
+        y+=self.h
         slider_id = self.box("obj", x, y, f"vsl 20 120 {min_val} {min_val+size} 0 0 empty empty empty 0 -9 0 12 #fcfcfc #000000 #000000 0 1")
+        self.connect(line_id, 0, slider_id, 0)
         y += 120+8
         int_id = -1
         tbf_id = -1
@@ -371,7 +376,7 @@ class PdPatcher:
             y, change_id, tbf_id = self.send_rate_limit_float(slider_id, send_rate_id, x, y)
         elif float == True and io != "send":
             y, change_id = self.recieve_rate_limit_float(slider_id, send_rate_id, x, y)
-        return slider_id, int_id, change_id, tbf_id
+        return line_id, int_id, change_id, tbf_id
 
     def send_rate_limit_int(self, slider_id, send_rate_id, x, y):
         # int -> number -> t b f
