@@ -356,7 +356,7 @@ class PdPatcher:
             tbf_ids.append(tbf_id)
         return slider_ids, float_ids, int_ids, tbf_ids, y_off
 
-    def slider(self, send_rate_id, x, y, min_val, size, float=False, io=None, line:int=None):
+    def slider(self, send_rate_id, x, y, min_val, size, float=False, io=None):
         assert io is not None, "io must be \"send\" or \"receive\""
         slider_id = self.box("obj", x, y, f"vsl 20 120 {min_val} {min_val+size} 0 0 empty empty empty 0 -9 0 12 #fcfcfc #000000 #000000 0 1")
         y += 120+8
@@ -364,16 +364,16 @@ class PdPatcher:
         tbf_id = -1
         float_id = -1
         if float == False and io == "send":
-            y, change_id, tbf_id = self.slider_send_int(slider_id, send_rate_id, x, y)
+            y, change_id, tbf_id = self.send_rate_limit_int(slider_id, send_rate_id, x, y)
         elif float == False and io != "send":
-            y, change_id = self.slider_receive_int(slider_id, send_rate_id, x, y)
+            y, change_id = self.receive_rate_limit_int(slider_id, send_rate_id, x, y)
         elif float == True and io == "send":
-            y, change_id, tbf_id = self.slider_send_float(slider_id, send_rate_id, x, y)
+            y, change_id, tbf_id = self.send_rate_limit_float(slider_id, send_rate_id, x, y)
         elif float == True and io != "send":
-            y, change_id = self.slider_receive_float(slider_id, send_rate_id, x, y)
+            y, change_id = self.recieve_rate_limit_float(slider_id, send_rate_id, x, y)
         return slider_id, int_id, change_id, tbf_id
 
-    def slider_send_int(self, slider_id, send_rate_id, x, y):
+    def send_rate_limit_int(self, slider_id, send_rate_id, x, y):
         # int -> number -> t b f
         int_id = self.object("int", x, y)
         y+=self.h
@@ -392,7 +392,7 @@ class PdPatcher:
         self.connect(change_id, 0, tbf_id, 0)
         return y, change_id, tbf_id
     
-    def slider_receive_int(self, slider_id, send_rate_id, x, y):
+    def receive_rate_limit_int(self, slider_id, send_rate_id, x, y):
         # int -> number
         int_id = self.object("int", x, y)
         y+=self.h
@@ -408,7 +408,7 @@ class PdPatcher:
         self.connect(zl_id, 0, change_id, 0)
         return y, change_id
 
-    def slider_send_float(self, slider_id, send_rate_id, x, y):
+    def send_rate_limit_float(self, slider_id, send_rate_id, x, y):
         # number -> t b f
         float_id = self.number(x, y)
         y+=self.h
@@ -424,7 +424,7 @@ class PdPatcher:
         self.connect(change_id, 0, tbf_id, 0)
         return y, change_id, tbf_id
 
-    def slider_receive_float(self, slider_id, send_rate_id, x, y):
+    def recieve_rate_limit_float(self, slider_id, send_rate_id, x, y):
         # number
         float_id = self.number(x, y)
         y+=self.h
