@@ -234,7 +234,7 @@ class OSC():
         print(route, osc_items)
 
     # with wildcard route and replies:
-    @osc.handle('my_wildcard_route/*')
+    @osc.handle('/my_wildcard_route/*')
     def _(route, *osc_items):
         print(route, osc_items)
         # return value sends a reply
