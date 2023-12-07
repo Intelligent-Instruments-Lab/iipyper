@@ -4,9 +4,9 @@ class Updater:
     Rate-limited function call
     '''
 
-    def __init__(self, f, count=1):
+    def __init__(self, f, count:int=1):
         self.f = f
-        self.count = count
+        self.count = int(count)
         self.counter = 0
 
     def __call__(self, *args, **kwargs):
