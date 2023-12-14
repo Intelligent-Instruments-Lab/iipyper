@@ -1,15 +1,16 @@
 import time
 from threading import Timer as _Timer
 
+from .util import maybe_lock
     
 class Stopwatch:
-    def __init__(self, punch=True):
+    def __init__(self, punch:bool=True):
         self.t = None
         if punch:
             self.punch()
 
-    def punch(self, latency=0):
-        """return elapsed time since last punch, then punch
+    def punch(self, latency:float=0):
+        """punch the clock and return elapsed time since previous punch
         
         Args:
             latency: punch `latency` seconds in the past, 
@@ -25,7 +26,7 @@ class Stopwatch:
         return dt_ns * 1e-9
 
     def read(self):
-        """return elapsed time since last punch"""
+        """just return elapsed time since last punch"""
         if self.t is None:
             return self.punch()
         return (time.perf_counter_ns() - self.t) * 1e-9

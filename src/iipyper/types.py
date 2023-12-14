@@ -1,4 +1,8 @@
-from typing import List, Tuple, TypeVar, Iterable, Any, Dict
+"""
+`from iipyper.types import *` to get a set of types to use with `OSC.handle`
+"""
+
+from typing import List, Tuple, TypeVar, Iterable, Any, Dict, Optional, Union
 from typing_extensions import TypeAliasType
 import json
 
@@ -17,7 +21,7 @@ class _Splat(type):
             r = Splat
         else:
             N = TypeVar('N')
-            Splat = TypeAliasType('Splat', Tuple[*[Any]*n], type_params=(N,))
+            Splat = TypeAliasType('Splat', Tuple[(Any,)*n], type_params=(N,))
             r = Splat[n]
         _Splat.instances[n] = r
         return r
@@ -25,9 +29,12 @@ class Splat(metaclass=_Splat):
     """horrible typing crimes to produce annotations for _consume_items
     which pydantic can also validate out of the box.
 
-    Splat[None] aliases List
-    Splat[2] aliases Tuple[Any, Any]
-    Splat[3] aliases Tuple[Any, Any, Any]
+    `Splat[None]` aliases `List`
+
+    `Splat[2]` aliases `Tuple[Any, Any]`
+
+    `Splat[3]` aliases `Tuple[Any, Any, Any]`
+    
     etc
     """
 

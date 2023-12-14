@@ -44,28 +44,38 @@ from .util import maybe_lock
 #         except osc_packet.ParseError:
 #             pass
 
+# can't use None for this since and argument value might be None
+class _Eos:
+    pass
+_eos = _Eos()
+
 def _consume_splat(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
+    # get length of Splat from type parameter
     params = typing.get_args(cls)
     splat_items = []
 
     if len(params)==0:
         # print(cls)
+        # Splat[None] case
         # read until a string or end of iteration is encountered
-        while hd is not None and not is_key(hd):
+        while hd is not _eos and not is_key(hd):
             splat_items.append(hd)
-            hd = next(tl, None)
+            # print(f'{splat_items=}')
+            hd = next(tl, _eos)
         return splat_items, hd
     
     elif len(params)==1:
         # print(cls)
+        # Splat[N] case
         # read the annotated number of items
         for _ in range(params[0]):
-            if hd is None:
+            if hd is _eos:
                 raise ValueError(f"""
                 hit end of arguments while parsing {cls}
                 """)
             splat_items.append(hd)
-            hd = next(tl, None)
+            # print(f'{splat_items=}')
+            hd = next(tl, _eos)
         return splat_items, hd
 
     else:
@@ -88,6 +98,8 @@ def _consume_items(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
         instance of cls constructed from consumed items,
         next item following those consumed (or None if end of iteration)
     """
+    # print(f'{hd=}, {tl=}, {cls=}')
+
     # consume groups of items annotated as Vector
     if hasattr(cls, '__name__') and cls.__name__=='Splat':
         return _consume_splat(hd, tl, cls, is_key)
@@ -115,7 +127,7 @@ def _consume_items(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
             hd = np.frombuffer(hd, dtype=np.float32)
 
     #single item case: return the head, advance to first element of tail
-    return hd, next(tl, None)
+    return hd, next(tl, _eos)
 
 def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]:
     """
@@ -148,7 +160,7 @@ def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]
         )
     try:
         _, item = _consume_items(None, items, None, is_key)
-        while item is not None:
+        while item is not _eos:
             # print(item, is_key(item))
             if is_key(item):
                 ### interpret this item as the name of an argument
@@ -177,6 +189,8 @@ def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]
                     raise ValueError("""
                     too many positional arguments.
                     """)
+                # print(f'{cls=}')
+                # print(position, positional_params)
                 if (
                     cls is Splat[None] 
                     and not kwargs 
@@ -207,11 +221,33 @@ def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]
 
 class OSC():
     """
-    TODO: Handshake between server and clients
-    TODO: Polling clients after handshake
+    iipyper OSC object.
+    Create one of these and use it to make OSC handlers and send OSC:
+
+    ```python
+    # make an OSC object receiving on port 9999
+    osc = OSC(port=9999)
+
+    # receive OSC messages at '/my_route'
+    @osc.handle
+    def my_route(route, *osc_items):
+        print(route, osc_items)
+
+    # with wildcard route and replies:
+    @osc.handle('/my_wildcard_route/*')
+    def _(route, *osc_items):
+        print(route, osc_items)
+        # return value sends a reply
+        return '/echo' + route, *osc_items
+
+    # create an OSC client and send it a message
+    osc.create_client('my_client', host='127.0.0.1', port=8888)
+    osc.send('/my/osc/route', 0, 1.0, 'abc', client='my_client')
+    ```
     """
-    def __init__(self, host="127.0.0.1", port=9999, verbose=True,
-         concurrent=False):
+    def __init__(self, 
+        host:str="127.0.0.1", port:int=9999, 
+        verbose:bool=True, concurrent:bool=False):
         """
         TODO: Expand to support multiple IPs + ports
 
@@ -271,12 +307,12 @@ class OSC():
         # if (self.server is not None):
         self.dispatcher.map(address, handler, needs_reply_address=True)
 
-    def create_client(self, name, host=None, port=None):
+    def create_client(self, name:str, host:Optional[str]=None, port:Optional[int]=None):
         """
         Add an OSC client.
         Args:
             name: name this client
-            host (int): IP to send to, defaults to same as server
+            host (str): IP to send to, defaults to same as server
             port (int): port to send to, defaults to 57120 (supercollider)
         """
         if (host == None):
@@ -304,15 +340,19 @@ class OSC():
             self.create_client(f'{host}:{port}', host, port)
         return self.clients[address]
 
-    def send(self, route, *msg, client=None):
+    def send(self, route:str, *msg, client:Optional[str]=None):
         """
         Send message to default client, or with client in address
 
         Args:
-            address: '/my/osc/route' or 'host:port/my/osc/route'
-            *msg: content
-            client: name of client or None
+            route: e.g. '/my/osc/route' or 'host:port/my/osc/route'
+            *msg: contents of OSC message
+            client: name of OSC client or None to use default client
         """
+        if len(self.clients)==0:
+            print('ERROR: iipyper: send: no OSC clients. use `create_client` to make one.')
+            return
+
         if client is not None:
             client = self.get_client_by_name(client)
         elif ':' in route:
@@ -461,7 +501,8 @@ class OSC():
                 if i==0:
                     # skip first argument (the OSC route)
                     continue
-                if p.kind in (p.VAR_KEYWORD, p.VAR_KEYWORD):
+                # print(p, p.kind)
+                if p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD):
                     pos = False
                 else:
                     named_params[name] = p
@@ -486,11 +527,13 @@ class OSC():
                     address: full OSC address
                     *args: content of OSC message
                 """
+                # print(f'{osc_items=}')
                 args, kw = _parse_osc_items(
                     osc_items, 
                     (positional_params, named_params, has_varp, has_varkw), 
                     kwargs
                 )
+                # print(f'{args=}, {kw=}')
 
                 try:
                     r = maybe_lock(f, lock, address, *args, **kw)
@@ -524,7 +567,9 @@ class OSC():
         return decorator if f is None else decorator(f)
     
     def args(self, route=None, return_host=None, return_port=None):
-        """decorate a function as an args-style OSC handler.
+        """DEPRECATED. use `handle` instead.
+        
+        decorate a function as an args-style OSC handler.
 
         the decorated function should look like:
         def f(route, my_arg, my_arg2, ...):
@@ -536,7 +581,9 @@ class OSC():
         return self.handle(route, return_host, return_port, kwargs=False)
 
     def kwargs(self, route=None, return_host=None, return_port=None, json_keys=None):
-        """decorate a function as an kwargs-style OSC handler.
+        """DEPRECATED. use `handle` instead.
+        
+        decorate a function as an kwargs-style OSC handler.
 
         the decorated function should look like:
         def f(route, my_key=my_value, ...):
@@ -559,6 +606,13 @@ class OSC():
         return self.handle(route, return_host, return_port)
         # return self._decorate(True, route, return_host, return_port, json_keys)
 
-    def __call__(self, client, *a, **kw):
-        """alternate syntax for `send` with client name first"""
+    def __call__(self, client:str, *a, **kw):
+        """
+        alternate syntax for `send` with client name first
+
+        `osc('my_client_name', 0, 1, 'message contents', None)`
+
+        Args:
+            client: name of OSC client created with `create_client`.
+        """
         self.send(*a, client=client, **kw)
