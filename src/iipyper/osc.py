@@ -550,7 +550,14 @@ class OSC():
                                 client[1] if return_port is None else return_port
                             )
                             print('iipyper OSC return', client, r)
-                            self.get_client_by_sender(client).send_message(r[0], r[1:])
+                            try:
+                                self.get_client_by_sender(client).send_message(
+                                    r[0], r[1:])
+                            except ValueError:
+                                rt = [type(item) for item in r]
+                                print(
+                                    f'iipyper OSC return to {r[0]} failed,' 
+                                    f'possibly an unsupported type in {rt}')
                             
                 except pydantic.ValidationError as e:
                     print(f'ERROR: iipyper OSC handler:')

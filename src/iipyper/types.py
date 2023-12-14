@@ -39,7 +39,7 @@ class Splat(metaclass=_Splat):
     """
 
 def ndarray_to_json(array: np.ndarray) -> str:
-    array_list = array.tolist()
+    array_list = array.ravel().tolist()
     array_info = {
         'data': array_list,
         'dtype': str(array.dtype),
@@ -50,7 +50,7 @@ def ndarray_to_json(array: np.ndarray) -> str:
 def ndarray_from_json(json_str: str) -> np.ndarray:
     data = json.loads(json_str)
     array_data = data['data']
-    dtype = data['dtype']
+    dtype = data.get('dtype', 'float32')
     r = np.array(array_data, dtype=dtype)
     if 'shape' in data:
         r = r.reshape(data['shape'])
