@@ -8,8 +8,6 @@ from .util import *
 from .timing import *
 from .midi import *
 from .osc import *
-from .oscmap import *
-from .update import *
 from .audio import *
 from .tui import *
 from .state import _lock
