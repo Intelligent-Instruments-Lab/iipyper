@@ -2,7 +2,7 @@
 `from iipyper.types import *` to get a set of types to use with `OSC.handle`
 """
 
-from typing import List, Tuple, TypeVar, Iterable, Any, Dict, Optional, Union
+from typing import NewType, List, Tuple, TypeVar, Iterable, Any, Dict, Optional, Union
 from typing_extensions import TypeAliasType
 import json
 
@@ -12,19 +12,20 @@ import pydantic_numpy
 from pydantic_numpy import NpNDArray as NDArray
 
 class _Splat(type):
+    # cache instances so that e.g. (Splat[None] is Splat[None]) evaluates True
     instances = {}
     @staticmethod
     def __getitem__(n):
         if n in _Splat.instances: return _Splat.instances[n]
         if n is None:
-            Splat = TypeAliasType('Splat', List)
+            Splat = NewType('Splat', List)
             r = Splat
         else:
-            N = TypeVar('N')
-            Splat = TypeAliasType('Splat', Tuple[(Any,)*n], type_params=(N,))
-            r = Splat[n]
+            Splat = NewType('Splat', Tuple[(Any,)*n])
+            r = Splat
         _Splat.instances[n] = r
         return r
+    
 class Splat(metaclass=_Splat):
     """horrible typing crimes to produce annotations for _consume_items
     which pydantic can also validate out of the box.

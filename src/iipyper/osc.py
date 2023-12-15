@@ -51,7 +51,7 @@ _eos = _Eos()
 
 def _consume_splat(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
     # get length of Splat from type parameter
-    params = typing.get_args(cls)
+    params = typing.get_args(cls.__supertype__)
     splat_items = []
 
     if len(params)==0:
@@ -64,11 +64,11 @@ def _consume_splat(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
             hd = next(tl, _eos)
         return splat_items, hd
     
-    elif len(params)==1:
+    else:
         # print(cls)
         # Splat[N] case
         # read the annotated number of items
-        for _ in range(params[0]):
+        for _ in range(len(params)):
             if hd is _eos:
                 raise ValueError(f"""
                 hit end of arguments while parsing {cls}
@@ -77,9 +77,6 @@ def _consume_splat(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
             # print(f'{splat_items=}')
             hd = next(tl, _eos)
         return splat_items, hd
-
-    else:
-        raise TypeError
     
 def _is_legacy_json_str(item):
     if isinstance(item, str) and item.startswith('%JSON:'):
@@ -199,7 +196,7 @@ def _parse_osc_items(osc_items, sig_info, allow_pos, allow_kw, verbose) -> Tuple
                 # print(position, positional_params)
                 if (
                     cls is Splat[None] 
-                    and not kwargs 
+                    and not allow_kw 
                     and position<len(positional_params)-1
                     ):
                     raise ValueError("""
@@ -395,7 +392,7 @@ class OSC():
     
     def handle(self, 
             route:str=None, return_host:str=None, return_port:int=None,
-            allow_pos=True, allow_kw=True, lock=True):
+            allow_pos=None, allow_kw=True, lock=True):
         """
         OSC handler decorator supporting mixed args and kwargs, typing.
 
@@ -497,7 +494,8 @@ class OSC():
             f = None
 
         def decorator(f, route=route, 
-                return_host=return_host, return_port=return_port):
+                return_host=return_host, return_port=return_port,
+                allow_pos=allow_pos, allow_kw=allow_kw):
             # default_route = f'/{f.__name__}/*'
             if route is None:
                 route = f'/{f.__name__}'
@@ -511,20 +509,32 @@ class OSC():
             named_params = {}
             has_varp = False
             has_varkw = False
+            all_default = True
             pos = True
             for i,(name,p) in enumerate(sig.parameters.items()):
                 if i==0:
                     # skip first argument (the OSC route)
                     continue
                 # print(p, p.kind)
-                if p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD):
-                    pos = False
+                
+                if p.kind == p.VAR_POSITIONAL:
+                    pos = False # no more positional args after variadic
+                    all_default = False
+                elif p.kind == p.VAR_KEYWORD:
+                    pos = False # no more positional args after variadic
                 else:
+                    if p.default == p.empty:
+                        all_default = False
                     named_params[name] = p
                     if pos:
                         positional_params.append(p)
                 has_varp |= p.kind==p.VAR_POSITIONAL
                 has_varkw |= p.kind==p.VAR_KEYWORD
+
+            # set allow_pos to False if it hasn't been explicitly set to True,
+            # and all parameters have defaults or are VAR_KEYWORD
+            if allow_pos is None:
+                allow_pos = not all_default
 
             if has_varkw and not allow_kw:
                 raise ValueError(f"""
