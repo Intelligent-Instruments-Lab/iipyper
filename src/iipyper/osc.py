@@ -129,12 +129,19 @@ def _consume_items(hd:Any, tl:Iterable, cls:type, is_key) -> Tuple[Any, Any]:
     #single item case: return the head, advance to first element of tail
     return hd, next(tl, _eos)
 
-def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]:
+def _parse_osc_items(osc_items, sig_info, allow_pos, allow_kw, verbose) -> Tuple[List, Dict[str, Any]]:
     """
     convert a list of osc message contents to positional and keyword arguments
-    of t
     """
     positional_params, named_params, has_varp, has_varkw = sig_info
+
+    if verbose > 1:
+        print(f"""parsing OSC
+        {osc_items=}
+        {positional_params=}
+        {named_params=}
+        {has_varp=} 
+        {has_varkw=}""")
 
     position = 0 if len(positional_params) or has_varp else -1
 
@@ -145,18 +152,17 @@ def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]
     # decide if an item represents the name of an argument,
     # or is a positional argument or part of a Splat[None]
     def is_key(item):
-        # print(f"""
-        #     {kwargs=} 
-        #     and {isinstance(item, str)=} 
-        #     and ({(item in named_params)=} or (
-        #         {has_varkw=} and {(position<0)=}
-        #         ))
-        #       """)
+        if verbose > 2:
+            print(f"""\tparsing {item=}
+                {allow_kw=} 
+                and {isinstance(item, str)=} 
+                and ({(item in named_params)=} 
+                    or ({has_varkw=} and {(position<0)=}) or not {allow_pos=}))""")
         return (
-            kwargs # named arguments enabled
+            allow_kw # named arguments enabled
             and isinstance(item, str) # can be a name
             and (item in named_params # is a known name
-                or (has_varkw and position<0)) # or must be a ** arg
+                or (has_varkw and position<0) or not allow_pos) # or must be a ** arg
         )
     try:
         _, item = _consume_items(None, items, None, is_key)
@@ -211,11 +217,20 @@ def _parse_osc_items(osc_items, sig_info, kwargs) -> Tuple[List, Dict[str, Any]]
                 if position >= len(positional_params) and not has_varp:
                     position = -1
             else:
-                raise ValueError("""
-                positional argument after keyword arg while parsing OSC
+                raise ValueError(f"""
+                positional argument after keyword arg while parsing OSC.
+                parsing: {osc_items}
+                positional arguments parsed: {args}
+                keyword arguments parsed: {kw}
+                failed on item: {item}
                 """)
     except StopIteration:
         pass
+
+    if verbose > 2:
+        print(f"""parsed
+            {args=} 
+            {kw=}""")
     return args, kw
 
 
@@ -247,7 +262,7 @@ class OSC():
     """
     def __init__(self, 
         host:str="127.0.0.1", port:int=9999, 
-        verbose:bool=True, concurrent:bool=False):
+        verbose:int=1, concurrent:bool=False):
         """
         TODO: Expand to support multiple IPs + ports
 
@@ -282,7 +297,7 @@ class OSC():
 
         if (self.server is None):
             self.server = cls((self.host, self.port), self.dispatcher)
-            if self.verbose:
+            if self.verbose > 0:
                 print(f"OSC server created {self.host}:{self.port}")
 
             # start the OSC server on its own thread
@@ -321,7 +336,7 @@ class OSC():
             port = 57120
         if ((host, port) not in self.clients):
             self.clients[host, port] = SimpleUDPClient(host, port)
-            if self.verbose:
+            if self.verbose > 0:
                 print(f"OSC client created {host}:{port}")
         else:
             print("OSC client already exists")
@@ -375,12 +390,12 @@ class OSC():
         if not route.startswith('/'):
             route = '/'+route
         client.send_message(route, msg)
-        if self.verbose:
+        if self.verbose > 0:
             print(f"OSC message sent {route}:{msg}")
     
     def handle(self, 
             route:str=None, return_host:str=None, return_port:int=None,
-            kwargs=True, lock=True):
+            allow_pos=True, allow_kw=True, lock=True):
         """
         OSC handler decorator supporting mixed args and kwargs, typing.
 
@@ -506,15 +521,20 @@ class OSC():
                     pos = False
                 else:
                     named_params[name] = p
-                if pos:
-                    positional_params.append(p)
+                    if pos:
+                        positional_params.append(p)
                 has_varp |= p.kind==p.VAR_POSITIONAL
                 has_varkw |= p.kind==p.VAR_KEYWORD
 
-            if has_varkw and not kwargs:
+            if has_varkw and not allow_kw:
                 raise ValueError(f"""
                 ERROR: iipyper: OSC handler {f} was created with kwargs=False,
                 but the decorated function has a ** argument
+                """)
+            if has_varp and not allow_pos:
+                raise ValueError(f"""
+                ERROR: iipyper: OSC handler {f} was created with args=False,
+                but the decorated function has a * argument
                 """)
 
             # wrap with pydantic validation decorator
@@ -528,11 +548,18 @@ class OSC():
                     *args: content of OSC message
                 """
                 # print(f'{osc_items=}')
-                args, kw = _parse_osc_items(
-                    osc_items, 
-                    (positional_params, named_params, has_varp, has_varkw), 
-                    kwargs
-                )
+                try:
+                    args, kw = _parse_osc_items(
+                        osc_items, 
+                        (positional_params, named_params, has_varp, has_varkw), 
+                        allow_pos, allow_kw,
+                        self.verbose
+                    )
+                except Exception:
+                    raise ValueError(f"""
+                    {address} {osc_items}
+                    failed to parse OSC for function with signature: {sig}
+                    """)
                 # print(f'{args=}, {kw=}')
 
                 try:
@@ -574,44 +601,29 @@ class OSC():
         return decorator if f is None else decorator(f)
     
     def args(self, route=None, return_host=None, return_port=None):
-        """DEPRECATED. use `handle` instead.
-        
-        decorate a function as an args-style OSC handler.
+        """like `handle`, but only positional arguments are allowed.
 
-        the decorated function should look like:
-        def f(route, my_arg, my_arg2, ...):
-            ...
-        the OSC message will be converted to python types and passed as positional
-        arguments.
+        able to parse some edge cases which `handle` cannot.
         """
-        # return self._decorate(False, route, return_host, return_port, None)
-        return self.handle(route, return_host, return_port, kwargs=False)
+        return self.handle(
+            route, return_host, return_port, 
+            allow_pos=True, allow_kw=False)
 
-    def kwargs(self, route=None, return_host=None, return_port=None, json_keys=None):
-        """DEPRECATED. use `handle` instead.
-        
-        decorate a function as an kwargs-style OSC handler.
+    def kwargs(self, route=None, return_host=None, return_port=None, 
+               json_keys=None):
+        """like `handle`, but only keyword arguments are allowed.
 
-        the decorated function should look like:
-        def f(route, my_key=my_value, ...):
-            ...
-        the incoming OSC message should alternate argument names with values:
-            /osc/route 'my_key' value 'my_key2' value ...
-        
-        Args:
-            route: specify the OSC route. if None, use the function name
-            json_keys: names of keyword arguments which should be decoded
-                from JSON to python objects, 
-                in the case that they arrive as strings.
-                alternatively, if a string starts with '%JSON:' it will be decoded.
+        able to parse some edge cases which `handle` cannot.
         """
         if json_keys is not None:
-            raise ValueError("""
-            OSC.kwargs is deprecated. use OSC.handle and replace json_keys with
-            type annotation of function arguments as `object`.
+            raise ValueError(f"""
+            OSC.kwargs {route}: `json_keys` has been removed.
+            replace `json_keys` with type annotation of arguments as `object`.
+            consider using `OSC.handle` instead of `OSC.kwargs`.
             """)
-        return self.handle(route, return_host, return_port)
-        # return self._decorate(True, route, return_host, return_port, json_keys)
+        return self.handle(
+            route, return_host, return_port,
+            allow_pos=False, allow_kw=True)
 
     def __call__(self, client:str, *a, **kw):
         """

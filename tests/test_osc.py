@@ -1,5 +1,6 @@
 import pytest
 import time
+from collections import defaultdict
 
 from iipyper import OSC
 from iipyper.types import *
@@ -9,7 +10,6 @@ def setup_osc():
     port = 9999
     osc = OSC(port=port)
     osc.create_client('self', '127.0.0.1', port)
-
     return osc
 
 def test_send_rcv(setup_osc):
@@ -114,3 +114,38 @@ def test_send_rcv_long2(setup_osc):
 
     time.sleep(0.02)
     assert status['rcv'], 'OSC not received'
+
+@pytest.mark.parametrize('case', [
+    ('/a', ('/a',), ('/a/b',)),
+    ('/a/*', ('/a/b', '/a/', '/a/b/c/'), ('/a',)),
+    ('/*/b', ('/a/b', '//b'), ('/a/c/b')),
+    ('/a/*/b', ('/a/c/b', '/a//b'), ('/a/c/d/b')),
+    ('/a/**/b', ('/a/c/b', '/a//b', '/a/c/d/b'), ('/a/b')),
+    ('/a*/b', ('/a/b', '/ac/b'), ('/a/c/b', '/a/b/c')),
+    # ('/a//b', ('/a/c/b', '/a/c/d/b', '/a/b'), ('/ac/b', '/a/b/c', '/a/d/b/c')), # python-OSC does not support //
+])
+def test_wildcard(setup_osc, case):
+    osc = setup_osc
+
+    address, pos, neg = case
+    rcv = set()
+
+    @osc.handle(address)
+    def _(addr):
+        rcv.add(addr)
+
+    time.sleep(0.02)
+
+    for r in pos:
+        osc.send(r)
+    for r in neg:
+        osc.send(r)
+
+    time.sleep(0.02)
+
+    for r in pos:
+        assert r in rcv, f'for {address=}, message {r} should have been received'
+    for r in rcv:
+        assert r in pos, f'for {address=}, message {r} should not have been received'
+
+
