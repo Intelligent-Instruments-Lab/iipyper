@@ -1,5 +1,6 @@
 import functools as ft
 import time
+import traceback
 from typing import Optional, List, Union
 
 import mido
@@ -187,8 +188,13 @@ class MIDI:
                 # call the handler if it passes the filter
                 if use_handler:
                     with _lock:
-                        if self.verbose>1: print(f'MIDI on port {port_name}')
-                        f(msg)
+                        if self.verbose>1: print(f'from port {port_name}')
+                        if self.verbose>1: print(f'handler function {f}')
+                        try:
+                            f(msg)
+                        except Exception as e:
+                            print(f'error in MIDI handler {f}:')
+                            traceback.print_exc()
         return callback
 
     def _send_msg(self, port, m):
