@@ -18,7 +18,8 @@ pip install iipyper
 
 ```sh
 git clone git@github.com:Intelligent-Instruments-Lab/iipyper.git
-pip install -e iipyper
+cd iipyper
+poetry install iipyper
 ```
 
 ## Contact
