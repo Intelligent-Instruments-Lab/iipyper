@@ -75,16 +75,26 @@ class MIDI:
             in_ports = set(mido.get_input_names())
 
         self.in_ports = {}  
-        for i in range(virtual_in_ports):
-            virtual_in = f'To iipyper {i+1}'
-            self.in_ports[virtual_in] = mido.open_input(
-                virtual_in, virtual=True)
+        # for i in range(virtual_in_ports):
+        #     virtual_in = f'To iipyper {i+1}'
+        #     self.in_ports[virtual_in] = mido.open_input(
+        #         virtual_in, virtual=True)
+        # for port in in_ports:
+        #     try:
+        #         self.in_ports[port] = mido.open_input(
+        #             port, callback=self.get_callback(port))
+        #     except Exception:
+        #         print(f"""WARNING: MIDI input {port} not found""")
         for port in in_ports:
             try:
                 self.in_ports[port] = mido.open_input(
                     port, callback=self.get_callback(port))
             except Exception:
                 print(f"""WARNING: MIDI input {port} not found""")
+        for i in range(virtual_in_ports):
+            virtual_in = f'To iipyper {i+1}'
+            self.in_ports[virtual_in] = mido.open_input(
+                virtual_in, virtual=True, callback=self.get_callback(port))
 
         if self.verbose:
             print(f"""opened MIDI input ports: {list(self.in_ports)}""")
@@ -120,6 +130,16 @@ class MIDI:
         
         Decorated function receives the following arguments:
             `msg`: a [mido](https://mido.readthedocs.io/en/stable/messages/index.html) message
+
+        Args:
+            port: (collection of) MIDI ports to filter on
+            channel: (collection of) MIDI channels (0-index) to filter on
+            type: (collection of) MIDI event types to filter on
+            note: (collection of) MIDI note numbers to filter on
+            velocity: (collection of) MIDI velocities numbers to filter on
+            value: (collection of) MIDI values to filter on
+            control: (collection of) MIDI cc numbers to filter on
+            program: (collection of) MIDI program numbers to filter on
         """
         if len(a):
             # bare decorator
@@ -146,24 +166,28 @@ class MIDI:
         return decorator if f is None else decorator(f)
 
     def get_callback(self, port_name):
-        # print(port_name)
+        if self.verbose>1: print(f'handler for MIDI port {port_name}')
         def callback(msg):
             if self.verbose > 1:
                 print(f'{msg=}')
             if not self.running:
                 return
+            # check each handler 
             for filters, f in self.handlers:
+                # check port
                 use_handler = (
                     'port' not in filters 
                     or port_name in filters.pop('port'))
+                # check other filters
                 use_handler &= all(
                     filt is None 
                     or not hasattr(msg, k)
                     or getattr(msg, k) in filt
                     for k,filt in filters.items())
+                # call the handler if it passes the filter
                 if use_handler:
                     with _lock:
-                        print(port_name)
+                        if self.verbose>1: print(f'MIDI on port {port_name}')
                         f(msg)
         return callback
 
