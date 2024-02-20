@@ -448,8 +448,8 @@ class OSC():
 
         type annotations:
             object:
-                decode a string as JSON
-                decode bytes through pickle
+                If the argument is a string, decode as JSON.
+                If the argument is a bytes, decode through pickle.
 
             Splat[N]: 
                 consume N consecutive items from the OSC message items into a 
