@@ -13,6 +13,7 @@ from pythonosc.udp_client import SimpleUDPClient
 
 import pydantic
 
+from .log import *
 from .types import *
 from .util import maybe_lock
 
@@ -269,6 +270,7 @@ class OSC():
         self.client_names = {} # (name) -> (host,port)
 
         self.create_server()
+        self.create_log()
 
     def create_server(self):#, host=None, port=None):
         """
@@ -290,6 +292,9 @@ class OSC():
             # self.server.serve_forever()
         else:
             print("OSC server already exists")
+
+    def create_log(self):
+        self.log = OSCLog(self.server, verbose=self.verbose)
 
     # def close_server(self):
     #     """

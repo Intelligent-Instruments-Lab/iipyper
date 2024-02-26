@@ -11,6 +11,7 @@ from .osc import *
 from .audio import *
 from .tui import *
 from .state import _lock
+from .log import *
 
 _threads = []
 def repeat(

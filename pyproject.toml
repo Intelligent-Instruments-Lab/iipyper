@@ -18,6 +18,7 @@ sounddevice = "^0.4.6"
 textual = "~0.41.0"
 pydantic = "^2.5.2"
 pydantic-numpy = "^4.1.0"
+loguru = "^0.7.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
