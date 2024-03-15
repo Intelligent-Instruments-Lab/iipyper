@@ -7,12 +7,18 @@ import mido
 
 from .state import _lock
 
+def _alias(item):
+    if item=='cc':
+        return 'control_change'
+    if item=='pc':
+        return 'program_change'
+    return item
 def _get_filter(item):
     if item is None:
         return item
     if (not isinstance(item, str)) and hasattr(item, '__iter__'):
-        return set(item)
-    return {item}
+        return set(_alias(i) for i in item)
+    return {_alias(item)}
 
 class MIDI:
     """
@@ -170,7 +176,7 @@ class MIDI:
         if self.verbose>1: print(f'handler for MIDI port {port_name}')
         def callback(msg):
             if self.verbose > 1:
-                print(f'{msg=}')
+                print(f'filtering MIDI {msg} port={port_name}')
             if not self.running:
                 return
             # check each handler 
@@ -186,15 +192,17 @@ class MIDI:
                     or getattr(msg, k) in filt
                     for k,filt in filters.items())
                 # call the handler if it passes the filter
-                if use_handler:
-                    with _lock:
-                        if self.verbose>1: print(f'from port {port_name}')
-                        if self.verbose>1: print(f'handler function {f}')
-                        try:
-                            f(msg)
-                        except Exception as e:
-                            print(f'error in MIDI handler {f}:')
-                            traceback.print_exc()
+                if not use_handler:
+                    continue
+                with _lock:
+                    if self.verbose>1: print(f'enter handler function {f}')
+                    try:
+                        f(msg)
+                    except Exception as e:
+                        print(f'error in MIDI handler {f}:')
+                        traceback.print_exc()
+                    if self.verbose>1: print(f'exit handler function {f}')
+
         return callback
 
     def _send_msg(self, port, m):

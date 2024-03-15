@@ -72,6 +72,17 @@ def repeat(
 
     return decorator
 
+def thread(f):
+    """
+    EXPERIMENTAL
+    
+    wrap a function to be called in a new thread
+    """
+    def g(*a, **kw):
+        th = Thread(target=f, args=a, kwargs=kw, daemon=True)
+        th.start()
+        _threads.append(th)
+    return g
 
 _cleanup_fns = []
 # decorator to make a function run on KeyBoardInterrupt (before exit)
@@ -97,6 +108,7 @@ def lock(f):
 def start_audio():
     """start all audio streams"""
     for a in Audio.instances:
+        # print('????')
         if not a.stream.active:
             a.stream.start()
 

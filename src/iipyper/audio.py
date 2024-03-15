@@ -3,6 +3,15 @@ import sounddevice as sd
 # import numpy as np
 # import inspect
 
+def audio(**kw):
+    def decorator(f):
+        def callback(indata, outdata, frames, time, status):
+            if status:
+                print(f'sounddevice error {status=}')
+            f(indata, outdata)
+        return Audio(callback=callback, **kw)
+    return decorator
+
 class Audio:
     instances = [] # 
     def __init__(self, *a, **kw):
