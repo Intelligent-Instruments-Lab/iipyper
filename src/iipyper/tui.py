@@ -1,11 +1,12 @@
 import sys
+import threading
 try:
     from rich.panel import Panel
     from rich.pretty import Pretty
 
     from textual.app import App, ComposeResult
     from textual.reactive import reactive
-    from textual.widgets import Header, Footer, Static, Button, RichLog, Label
+    from textual.widgets import Header, Footer, Static, Button, Log, RichLog, Label
     from textual.css.query import NoMatches, TooManyMatches
 
     class TUI(App):
@@ -18,7 +19,9 @@ try:
 
         def __init__(self):
             super().__init__()
-            self.std_log = RichLog(id='std_log')
+            # self.std_log = RichLog(id='std_log')
+            self.std_log = Log(id='std_log')
+            self.buffered_writes = []
 
         def compose(self) -> ComposeResult:
             """Create child widgets for the Textual App.
@@ -55,7 +58,7 @@ try:
             return f
         
         def on_mount(self):
-            # self.std_log.write('MOUNT')
+            self.print('', end='') # flush buffered_writes to std_log
             try:
                 self._mount()
             except Exception as e:
@@ -69,33 +72,27 @@ try:
         def on_button_pressed(self, event: Button.Pressed) -> None:
             getattr(self, f'action_{event.button.id}')()
 
-
-        # def _print(self, k, *v):
-        #     for s in (k, *v):
-        #         self.std_log.write(s)
-        #    # self.std_log.write(' '.join(str(s) for s in (k, *v)))
-
         def flush(self): pass
         def write(self, s):
             """for redirecting stdout to a file-like"""
             if self.is_running:
+                if len(self.buffered_writes):
+                    s = '\n'.join(self.buffered_writes)
+                    self.buffered_writes = []
                 return self.call_from_anywhere(self.std_log.write, s)
             else:
-                # TODO: buffer and write after start
+                self.buffered_writes.append(s)
                 return sys.__stdout__.write(s)
 
         def print(self, *a, **kw):
             """redirects to the UI's default std output log"""
             kw['file'] = self
             print(*a, **kw)
-            # if self.is_running:
-            #     self.call_from_anywhere(self._print, *a, **kw)
-            #     # try:
-            #     #     self.call_from_thread(self._print, *a, **kw)
-            #     # except:
-            #     #     self._print(*a, **kw)
-            # else:
-            #     print(*a, **kw)
+        
+        def print_defer(self, *a, **kw):
+            """redirects to the UI's default std output log"""
+            kw['file'] = self
+            threading.Thread(target=print, args=a, kwargs=kw).start()
 
         def call_from_anywhere(self, f, *a, **kw):
             try:
@@ -114,6 +111,10 @@ try:
                 print(*a)
                 for k,v in kw.items():
                     print(k, '->', v)
+
+        def defer(self, *a, **kw):
+            """__call__, but do it from a new thread and return immediately"""
+            threading.Thread(target=self, args=a, kwargs=kw, daemon=True).start()
 
         def _call(self, **kw):
             """

@@ -280,6 +280,8 @@ class OSC():
         self.clients = {} # (host,port) -> client
         self.client_names = {} # (name) -> (host,port)
 
+        self.handler_docs = []
+
         self.create_server()
 
     def create_server(self):#, host=None, port=None):
@@ -392,7 +394,7 @@ class OSC():
     
     def handle(self, 
             route:str=None, return_host:str=None, return_port:int=None,
-            allow_pos=None, allow_kw=True, lock=True):
+            allow_pos=None, allow_kw=True, lock=True, doc:str=None):
         """
         OSC handler decorator supporting mixed args and kwargs, typing.
 
@@ -419,6 +421,7 @@ class OSC():
                 corresponding to named arguments of the decorated function.
             lock: if True (default), use the global iipyper lock around the
                 decorated function
+            doc: replace the docstring of the decorated function
 
         keyword arguments of the decorated function:
             if a string with the same name as a parameter is found, 
@@ -495,7 +498,7 @@ class OSC():
 
         def decorator(f, route=route, 
                 return_host=return_host, return_port=return_port,
-                allow_pos=allow_pos, allow_kw=allow_kw):
+                allow_pos=allow_pos, allow_kw=allow_kw, doc=doc):
             # default_route = f'/{f.__name__}/*'
             if route is None:
                 route = f'/{f.__name__}'
@@ -546,6 +549,9 @@ class OSC():
                 ERROR: iipyper: OSC handler {f} was created with args=False,
                 but the decorated function has a * argument
                 """)
+            
+            doc = doc or f.__doc__
+            self.handler_docs.append((route, doc))
 
             # wrap with pydantic validation decorator
             f = pydantic.validate_call(f)
@@ -557,7 +563,6 @@ class OSC():
                     address: full OSC address
                     *args: content of OSC message
                 """
-                # print(f'{osc_items=}')
                 try:
                     args, kw = _parse_osc_items(
                         osc_items, 
@@ -634,6 +639,16 @@ class OSC():
         return self.handle(
             route, return_host, return_port,
             allow_pos=False, allow_kw=True)
+
+    def get_docs(self):
+        """return a string built from routes and docstrings of osc handlers"""
+        s = ''
+        for route,doc in self.handler_docs:
+            s += route
+            if doc is not None: 
+                s += doc
+            s += '\n'
+        return s
 
     def __call__(self, client:str, *a, **kw):
         """

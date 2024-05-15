@@ -4,7 +4,10 @@ from contextlib import contextmanager
 from .state import _lock
 
 @contextmanager
-def profile(label, print=print):
+def profile(label, print=print, enable=True):
+    if not enable:
+        yield None
+        return
     t = time.perf_counter_ns()
     yield None
     dt = (time.perf_counter_ns() - t)*1e-9

@@ -71,6 +71,8 @@ class MIDI:
         # type -> list[Optional[set[port], Optional[set[channel]], function]
         self.handlers = []
 
+        self.handler_docs = []
+
         if isinstance(in_ports, str):
             in_ports = in_ports.split(',')
         if isinstance(out_ports, str):
@@ -167,10 +169,21 @@ class MIDI:
             f = None
 
         def decorator(f):
+            self.handler_docs.append((kw, f.__doc__))
+
             self.handlers.append((filters, f))
             return f
         
         return decorator if f is None else decorator(f)
+    
+    def get_docs(self):
+        s = ''
+        for filters,doc in self.handler_docs:
+            s += str(filters)
+            if doc is not None: 
+                s += doc
+            s += '\n'
+        return s
 
     def get_callback(self, port_name):
         if self.verbose>1: print(f'handler for MIDI port {port_name}')
