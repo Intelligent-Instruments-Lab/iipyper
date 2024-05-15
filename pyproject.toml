@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "iipyper"
-version = "0.1.2b0"
+version = "0.1.3b0"
 description = "python package for easy MIDI, OSC, event loops"
 authors = ["Victor Shepardson <victor.shepardson@gmail.com>", "Jack Armitage <jack.armitage@me.com>"]
 license = "MIT"
