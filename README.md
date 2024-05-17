@@ -1,4 +1,4 @@
-# iipyper
+# iipyper ([Documentation](https://intelligent-instruments-lab.github.io/iipyper/))
 
 `iipyper` is a Python package for fast creation of [Open Sound Control](https://en.wikipedia.org/wiki/Open_Sound_Control) (OSC) and [MIDI](https://en.wikipedia.org/wiki/MIDI)-based event loops.
 

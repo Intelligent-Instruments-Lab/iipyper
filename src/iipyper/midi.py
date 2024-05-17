@@ -1,3 +1,4 @@
+import os
 import functools as ft
 import time
 import traceback
@@ -39,7 +40,7 @@ class MIDI:
     def print_ports(cls):
         print('Available MIDI inputs:')
         for s in set(mido.get_input_names()):
-            print(f'\t{s}')
+            print(f'\t{s}') 
         print('Available MIDI outputs:')
         for s in set(mido.get_output_names()):
             print(f'\t{s}')
@@ -101,9 +102,12 @@ class MIDI:
             except Exception:
                 print(f"""WARNING: MIDI input {port} not found""")
         for i in range(virtual_in_ports):
-            virtual_in = f'To iipyper {i+1}'
-            self.in_ports[virtual_in] = mido.open_input(
-                virtual_in, virtual=True, callback=self.get_callback(port))
+            port = f'To iipyper {i+1}'
+            try:
+                self.in_ports[port] = mido.open_input(
+                    port, virtual=True, callback=self.get_callback(port))
+            except Exception: print(
+                f'WARNING: iipyper: failed to open virtual MIDI port {port}')
 
         if self.verbose:
             print(f"""opened MIDI input ports: {list(self.in_ports)}""")
@@ -111,9 +115,11 @@ class MIDI:
         ##### WIP
         self.out_ports = {}
         for i in range(virtual_out_ports):
-            virtual_out = f'From iipyper {i+1}'
-            self.out_ports[virtual_out] = mido.open_output(
-                virtual_out, virtual=True)
+            port = f'From iipyper {i+1}'
+            try:
+                self.out_ports[port] = mido.open_output(port, virtual=True)
+            except Exception: print(
+                f'WARNING: iipyper: failed to open virtual MIDI port {port}')
 
         if out_ports is None:
             out_ports = []
