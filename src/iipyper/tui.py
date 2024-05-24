@@ -8,6 +8,7 @@ try:
     from textual.reactive import reactive
     from textual.widgets import Header, Footer, Static, Button, Log, RichLog, Label
     from textual.css.query import NoMatches, TooManyMatches
+    from textual.screen import Screen
 
     class TUI(App):
         """Base Textual app for iipyper programs."""
@@ -15,7 +16,7 @@ try:
         # CSS_PATH = 'my_tui.css'
         # BINDINGS = [
         #     ("a", "my_a_action", "Do something when A is pressed"),
-        #     ("b", "my_b_action", "Do somethign when B is pressed")]
+        #     ("b", "my_b_action", "Do something when B is pressed")]
 
         def __init__(self):
             super().__init__()
@@ -23,7 +24,7 @@ try:
             self.std_log = Log(id='std_log')
             self.buffered_writes = []
 
-        def compose(self) -> ComposeResult:
+        def compose(self):
             """Create child widgets for the Textual App.
             
             override this to build the TUI for your iipyper app.
@@ -70,7 +71,9 @@ try:
             return f
 
         def on_button_pressed(self, event: Button.Pressed) -> None:
-            getattr(self, f'action_{event.button.id}')()
+            k = f'action_{event.button.id}'
+            if hasattr(self, k):
+                getattr(self, k)()
 
         def flush(self): pass
         def write(self, s):
@@ -126,10 +129,13 @@ try:
                 return
             for k in kw:
                 try:
-                    node = self.query_one('#'+k)
+                    # TODO: search later screens?
+                    node = self.screen_stack[0].query_one('#'+k)
                     node.value = kw[k]
-                except (NoMatches, TooManyMatches):
+                except NoMatches:
                     self.print(f'TUI: node "{k}" not found')
+                except TooManyMatches:
+                    self.print(f'TUI: node "{k}" multiply defined')
                 except AttributeError:
                     self.print(f'TUI: node "{k}" lacks value "reactive"')
 

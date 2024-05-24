@@ -96,16 +96,17 @@ class MIDI:
         #     except Exception:
         #         print(f"""WARNING: MIDI input {port} not found""")
         for port in in_ports:
+            cb = self.get_callback(port)
             try:
-                self.in_ports[port] = mido.open_input(
-                    port, callback=self.get_callback(port))
+                self.in_ports[port] = mido.open_input(port, callback=cb)
             except Exception:
-                print(f"""WARNING: MIDI input {port} not found""")
+                print(f"""WARNING: failed to open MIDI input {port}""")
         for i in range(virtual_in_ports):
             port = f'To iipyper {i+1}'
+            cb = self.get_callback(port)
             try:
                 self.in_ports[port] = mido.open_input(
-                    port, virtual=True, callback=self.get_callback(port))
+                    port, virtual=True, callback=cb)
             except Exception: print(
                 f'WARNING: iipyper: failed to open virtual MIDI port {port}')
 

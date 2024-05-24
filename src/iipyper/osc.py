@@ -591,7 +591,8 @@ class OSC():
                                 client[0] if return_host is None else return_host,
                                 client[1] if return_port is None else return_port
                             )
-                            print('iipyper OSC return', client, r)
+                            if self.verbose > 0:
+                                print('iipyper OSC return', client, r)
                             try:
                                 self.get_client_by_sender(client).send_message(
                                     r[0], r[1:])
