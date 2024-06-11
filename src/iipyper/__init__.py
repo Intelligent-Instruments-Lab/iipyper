@@ -28,11 +28,11 @@ def repeat(
         lock: if True, use the global iipyper lock to make calls thread-safe
         tick: minimum interval to sleep for 
             (will spinlock for the remainder for more precise timing)
+            if None, always sleep
     """
     # close the decorator over interval and lock arguments
     def decorator(f):
         def g():
-            # clock = Clock(tick)
             while True:
                 t = time.perf_counter()
                 returned_interval = maybe_lock(f, lock)
@@ -50,17 +50,20 @@ def repeat(
                     elapsed = time.perf_counter() - t
                     wait = wait_interval - elapsed
                 else:
+                    # else interval is from now until next call
                     t = time.perf_counter()
                     wait = wait_interval
-                # else interval is between return of one and call and next call
                 # print(f'{wait=}')
                 # tt = time.perf_counter()
-                if wait > 0:
-                    sleep = wait - tick
-                    if sleep > 0:
-                        time.sleep(sleep)
-                    spin_end = t + wait_interval
-                    while time.perf_counter() < spin_end: pass
+                if wait >= 0:
+                    if tick is None:
+                        time.sleep(wait)
+                    else:
+                        sleep = wait - tick
+                        if sleep > 0:
+                            time.sleep(sleep)
+                        spin_end = t + wait_interval
+                        while time.perf_counter() < spin_end: pass
                     # print(f'waited = {time.perf_counter() - tt}')
                 else:
                     print(
@@ -75,7 +78,6 @@ def repeat(
 def thread(f):
     """
     EXPERIMENTAL
-    
     wrap a function to be called in a new thread
     """
     def g(*a, **kw):
