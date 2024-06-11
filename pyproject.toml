@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "iipyper"
-version = "0.1.4b0"
-description = "A Ppython package for rapid prototyping with MIDI and OSC"
+version = "0.1.5"
+description = "A Python package for rapid prototyping with MIDI and OSC"
 authors = ["Victor Shepardson <victor.shepardson@gmail.com>", "Jack Armitage <jack.armitage@me.com>"]
 license = "MIT"
 readme = "README.md"
