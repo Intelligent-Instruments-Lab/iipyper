@@ -578,6 +578,12 @@ class OSC():
                 # print(f'{args=}, {kw=}')
 
                 try:
+                    if self.verbose > 0:
+                        argss = str((args, kw))
+                        if len(argss) > 50 and self.verbose<2:
+                            argss = argss[:47]+'...'
+                        print('iipyper OSC call', address, argss)
+
                     r = maybe_lock(f, lock, address, *args, **kw)
                     # if there was a return value,
                     # send it as a message back to the sender
@@ -592,7 +598,10 @@ class OSC():
                                 client[1] if return_port is None else return_port
                             )
                             if self.verbose > 0:
-                                print('iipyper OSC return', client, r)
+                                rs = str(r)
+                                if len(rs) > 50 and self.verbose<2:
+                                    rs = rs[:47]+'...'
+                                print('iipyper OSC return', client, rs)
                             try:
                                 self.get_client_by_sender(client).send_message(
                                     r[0], r[1:])
