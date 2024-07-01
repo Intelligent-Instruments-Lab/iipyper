@@ -504,6 +504,8 @@ class OSC():
                 route = f'/{f.__name__}'
             # print(route)
             assert isinstance(route, str) and route.startswith('/')
+            if not route.endswith('/'):
+                route = route + '/'
 
             # get info out of function signature
             sig = inspect.signature(f)
@@ -563,6 +565,11 @@ class OSC():
                     address: full OSC address
                     *args: content of OSC message
                 """
+
+                if not address.startswith('/'):
+                    address = '/' + address
+                if not address.endswith('/'):
+                    address = address + '/'
                 try:
                     args, kw = _parse_osc_items(
                         osc_items, 
