@@ -240,21 +240,21 @@ class OSC():
     # make an OSC object receiving on port 9999
     osc = OSC(port=9999)
 
-    # receive OSC messages at '/my_route'
+    # receive OSC messages at '/my_function'
     @osc.handle
-    def my_route(route, *osc_items):
-        print(route, osc_items)
+    def my_function(address, *osc_items):
+        print(address, osc_items)
 
-    # with wildcard route and replies:
-    @osc.handle('/my_wildcard_route/*')
-    def _(route, *osc_items):
-        print(route, osc_items)
+    # with wildcard pattern and replies:
+    @osc.handle('/my_wildcard_pattern/*')
+    def _(address, *osc_items):
+        print(address, osc_items)
         # return value sends a reply
-        return '/echo' + route, *osc_items
+        return '/return' + address, *osc_items
 
     # create an OSC client and send it a message
     osc.create_client('my_client', host='127.0.0.1', port=8888)
-    osc.send('/my/osc/route', 0, 1.0, 'abc', client='my_client')
+    osc.send('/my/osc/address', 0, 1.0, 'abc', client='my_client')
     ```
     """
     def __init__(self, 
@@ -504,8 +504,6 @@ class OSC():
                 route = f'/{f.__name__}'
             # print(route)
             assert isinstance(route, str) and route.startswith('/')
-            if not route.endswith('/'):
-                route = route + '/'
 
             # get info out of function signature
             sig = inspect.signature(f)
@@ -568,8 +566,7 @@ class OSC():
 
                 if not address.startswith('/'):
                     address = '/' + address
-                if not address.endswith('/'):
-                    address = address + '/'
+
                 try:
                     args, kw = _parse_osc_items(
                         osc_items, 

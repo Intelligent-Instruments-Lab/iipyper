@@ -3,15 +3,31 @@ from contextlib import contextmanager
 
 from .state import _lock
 
-@contextmanager
-def profile(label, print=print, enable=True):
-    if not enable:
-        yield None
-        return
-    t = time.perf_counter_ns()
-    yield None
-    dt = (time.perf_counter_ns() - t)*1e-9
-    print(f'{label}:\t {int(1000*dt)} ms')
+class profile:
+    """simple timing profiler as a decorator or context manager"""
+    def __init__(self, label=None, print=print, enable=True):
+        self.label = label
+        self.print=print
+        self.enable=enable
+
+    def __enter__(self):
+        if self.enable:
+           self.t = time.perf_counter_ns()
+        return self
+
+    def __exit__(self, typ, val, tb):
+        if self.enable:
+            dt = (time.perf_counter_ns() - self.t)*1e-9
+            self.print(f'{self.label or "profile"}:\t {int(1000*dt)} ms')
+
+    def __call__(self, f):
+        if self.label is None:
+            self.label = f.__name__
+        def g(*a, **kw):
+            with self:
+                return f(*a, **kw)
+        g.__name__ = f.__name__
+        return g
 
 def maybe_lock(f, lock, *a, **kw):
     if lock:

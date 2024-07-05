@@ -175,6 +175,18 @@ class AudioProcess:
 
     def recv(self):
         return self.user_conn.recv()
+    
+    def callback(self, f):
+        """
+        decorator to handle messages on the frontend (alternative to recv).
+        EXPERIMENTAL. only use this once per app.
+        """
+        def run():
+            while True:
+                msg = self.recv()
+                f(msg)
+        Thread(target=run, daemon=True).start()
+        return f
         
     def _step(self):
         while True:
@@ -197,7 +209,7 @@ class AudioProcess:
         # init in_frame
         if self.use_input and self.input_block and self.in_frame is None:
             _, c = self.stream.channels
-            self.in_frame = np.zeros(c, self.input_block)
+            self.in_frame = np.zeros((self.input_block, c))
 
         samps = len(outdata) if indata is None else len(indata)
 
@@ -211,13 +223,13 @@ class AudioProcess:
                 i_in = 0
                 while i_in < samps:
                     samps_to_process = samps-i_in
-                    samps_available = self.block_in-self.j_in
+                    samps_available = self.input_block-self.j_in
                     s = min(samps_to_process, samps_available)
                     i_in += s
                     self.j_in += s
 
                     self.in_frame[self.j_in-s:self.j_in] = indata[i_in-s:i_in]
-                    if self.j_in==samps:
+                    if self.j_in==len(self.in_frame):
                         self.to_step.put(np.copy(self.in_frame))
                         self.j_in = 0
 
