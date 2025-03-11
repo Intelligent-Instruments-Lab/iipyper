@@ -99,6 +99,7 @@ try:
 
         def call_from_anywhere(self, f, *a, **kw):
             try:
+                # this raises a runtime error if already on the main thread
                 return self.call_from_thread(f, *a, **kw)
             except RuntimeError as e:
                 return f(*a, **kw)
@@ -116,8 +117,10 @@ try:
                     print(k, '->', v)
 
         def defer(self, *a, **kw):
-            """__call__, but do it from a new thread and return immediately"""
+            """__call__, but do it from a new thread and return immediately instead of blocking to return the result"""
             threading.Thread(target=self, args=a, kwargs=kw, daemon=True).start()
+            ### DEBUG
+            # self(*a, **kw)
 
         def _call(self, **kw):
             """
@@ -139,6 +142,10 @@ try:
                 except AttributeError:
                     self.print(f'TUI: node "{k}" lacks value "reactive"')
 
+        def run(self, *a, exit=True, **kw):
+            super().run(*a, **kw)
+            if exit:
+                raise KeyboardInterrupt
 
 except ImportError as e:
     print(e.msg)

@@ -1,6 +1,8 @@
 from threading import Thread
 import time
 from numbers import Number
+import os
+import traceback
 
 import fire
 
@@ -15,7 +17,7 @@ from .state import _lock
 _threads = []
 def repeat(
         interval:float=None, between_calls:bool=False, 
-        lock:bool=True, tick:float=5e-3):
+        lock:bool=True, tick:float=5e-3, err_file=None):
     """
     Decorate a function to be called repeatedly in a loop.
     
@@ -35,7 +37,14 @@ def repeat(
         def g():
             while True:
                 t = time.perf_counter()
-                returned_interval = maybe_lock(f, lock)
+                try:
+                    returned_interval = maybe_lock(f, lock)
+                except Exception:
+                    if os.getenv('IIPYPER_PDB'):
+                        import pdb; pdb.post_mortem()
+                    else:
+                        traceback.print_exc(file=err_file)
+                    raise
 
                 if isinstance(returned_interval, Number):
                     wait_interval = returned_interval
@@ -63,6 +72,8 @@ def repeat(
                         if sleep > 0:
                             time.sleep(sleep)
                         spin_end = t + wait_interval
+                        # if time.perf_counter() < spin_end:
+                        #     print(f'spinning from {time.perf_counter()} to {spin_end}')
                         while time.perf_counter() < spin_end: pass
                     # print(f'waited = {time.perf_counter() - tt}')
                 else:
@@ -136,3 +147,9 @@ def run(main=None):
         for f in _cleanup_fns:
             f()
         exit(0)
+    except Exception:
+        if os.getenv('IIPYPER_PDB'):
+            import pdb; pdb.post_mortem()
+        else:
+            traceback.print_exc()
+        raise
