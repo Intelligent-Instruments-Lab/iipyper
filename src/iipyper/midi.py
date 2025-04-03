@@ -274,11 +274,16 @@ class MIDI:
         # print(f'SEND {time.perf_counter()}')
         if isinstance(m, mido.Message):
             self._send_msg(port, m)
+            # mido crashes if channel is a np.int8
+            m.channel = int(m.channel)
             if len(a)+len(kw) > 0:
                 print('warning: extra arguments to MIDI send')
         elif isinstance(m, str):
             try:
-                self._send_msg(port, mido.Message(m, *a, **kw))
+                m = mido.Message(m, *a, **kw)
+                # mido crashes if channel is a np.int8
+                m.channel = int(m.channel)
+                self._send_msg(port, m)
             except Exception:
                 print('MIDI send failed: bad arguments to mido.Message')
                 raise

@@ -9,7 +9,7 @@ import json
 import numpy as np
 
 import pydantic_numpy
-from pydantic_numpy import NpNDArray as NDArray
+from pydantic_numpy.typing import NpNDArray as NDArray
 
 class _Splat(type):
     # cache instances so that e.g. (Splat[None] is Splat[None]) evaluates True
