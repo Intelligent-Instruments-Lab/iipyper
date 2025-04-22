@@ -144,9 +144,11 @@ class MIDI:
         
         Decorated function receives the following arguments:
             `msg`: a [mido](https://mido.readthedocs.io/en/stable/messages/index.html) message
+            `port`: MIDI port name as a string (optional)
 
         Args:
-            port: (collection of) MIDI ports to filter on
+            port: (collection of) MIDI ports to filter on (whitelist)
+            ignore_port: (collection of) MIDI ports to filter on (blacklist)
             channel: (collection of) MIDI channels (0-index) to filter on
             type: (collection of) MIDI event types to filter on
             note: (collection of) MIDI note numbers to filter on
@@ -168,7 +170,7 @@ class MIDI:
                 assert k in {
                     'channel', 'port', 'type', 
                     'note', 'velocity', 'value', 
-                    'control', 'program'
+                    'control', 'program', 'ignore_port'
                     }, f'unknown MIDI message filter "{k}"'
             filters = {k:_get_filter(v) for k,v in kw.items()}
             f = None
@@ -207,17 +209,24 @@ class MIDI:
                         if self.verbose > 2:
                             print(f'suppressing MIDI feedback {msg} port={port_name}')
                         return
-
+                    
             if self.verbose > 1:
                 print(f'filtering MIDI {msg} port={port_name}')
             if not self.running:
                 return
             # check each handler 
             for filters, f in self.handlers:
+                filters = {**filters}
+                # print(port_name, f'{filters=}')
                 # check port
                 use_handler = (
                     'port' not in filters 
                     or port_name in filters.pop('port'))
+                # print(f"{ 'ignore_port' not in filters=}")
+                # print(f"{ port_name not in filters.pop('ignore_port')=}")
+                use_handler &= (
+                    'ignore_port' not in filters 
+                    or port_name not in filters.pop('ignore_port'))
                 # check other filters
                 use_handler &= all(
                     filt is None 
@@ -230,6 +239,8 @@ class MIDI:
                 with _lock:
                     if self.verbose>1: print(f'enter handler function {f}')
                     try:
+                        f(msg, port_name)
+                    except TypeError:
                         f(msg)
                     except Exception as e:
                         print(f'error in MIDI handler {f}:')
@@ -254,7 +265,7 @@ class MIDI:
 
     # # see https://mido.readthedocs.io/en/latest/message_types.html
 
-    def send(self, m:Union[str,mido.Message], *a, port:Optional[int]=None, **kw):
+    def send(self, m:Union[str,mido.Message], *a, port:Optional[str]=None, **kw):
         """
         send a mido message as MIDI. 
         

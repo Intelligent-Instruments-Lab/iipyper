@@ -80,7 +80,7 @@ try:
             """for redirecting stdout to a file-like"""
             if self.is_running:
                 if len(self.buffered_writes):
-                    s = '\n'.join(self.buffered_writes)
+                    s = ''.join(self.buffered_writes)
                     self.buffered_writes = []
                 return self.call_from_anywhere(self.std_log.write, s)
             else:
