@@ -15,6 +15,7 @@ from .tui import *
 from .state import _lock
 
 _threads = []
+_thread_exit = False
 def repeat(
         interval:float=None, between_calls:bool=False, 
         lock:bool=True, tick:float=5e-3, err_file=None):
@@ -35,7 +36,7 @@ def repeat(
     # close the decorator over interval and lock arguments
     def decorator(f):
         def g():
-            while True:
+            while not _thread_exit:
                 t = time.perf_counter()
                 try:
                     returned_interval = maybe_lock(f, lock)
@@ -139,8 +140,10 @@ def run(main=None):
             time.sleep(3e-2)
 
     except KeyboardInterrupt:
-        # for th in _threads:
-            # pass
+        global _thread_exit
+        _thread_exit = True
+        for th in _threads:
+            th.join(timeout=5.0)
         for a in Audio.instances:
             a.stream.stop()
             a.stream.close()

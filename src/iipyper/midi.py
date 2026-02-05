@@ -4,6 +4,7 @@ import time
 import traceback
 from typing import Optional, List, Union
 from collections import defaultdict
+from threading import Lock
 
 import mido
 from mido.frozen import freeze_message
@@ -51,8 +52,8 @@ class MIDI:
     ports_printed = False
 
     def __init__(self, 
-        in_ports:Optional[List[str]]=None, 
-        out_ports:Optional[List[str]]=None, 
+        in_ports:List[str]|str|None=None, 
+        out_ports:List[str]|str|None=None, 
         virtual_in_ports:int=1, virtual_out_ports:int=1, 
         suppress_feedback:bool=True,
         suppress_feedback_window:float=1e-3,
@@ -95,6 +96,8 @@ class MIDI:
         # map from MIDI event to list of timestamps
         self.recent_outputs = defaultdict(list)
         self.max_feedback_ns = suppress_feedback_window * 1e9
+
+        self.lock = Lock()
 
         self.in_ports = {}  
         for port in in_ports:
@@ -193,27 +196,38 @@ class MIDI:
         return s
 
     def get_callback(self, port_name):
-        if self.verbose>1: print(f'handler for MIDI port {port_name}')
+        if self.verbose>1: 
+            print(f'create handler for MIDI port {port_name}')
         def callback(msg):
-
-            # check recent outputs.
-            # if any are older than threshold, drop them
-            # if one is younger, drop it, break the search and ignore the input
-            if self.suppress_feedback:
-                m = freeze_message(msg)
-                t = time.time_ns()
-                ts = self.recent_outputs[m]
-                while len(ts):
-                    age = t - ts.pop()
-                    if age<self.max_feedback_ns:
-                        if self.verbose > 2:
-                            print(f'suppressing MIDI feedback {msg} port={port_name}')
-                        return
-                    
             if self.verbose > 1:
                 print(f'filtering MIDI {msg} port={port_name}')
             if not self.running:
                 return
+
+            # NOTE: this should be fast, as it only processes current
+            # event;
+            # but this means that every unique MIDI event received remains in 
+            # storage if there is no feedback?
+            # for note events that's acceptable in most cases probably
+            # 128 * 16 * 128 is just in the 100k range
+            if self.suppress_feedback:
+                # freeze message so it can be a dict key
+                m = freeze_message(msg)
+                t = time.time_ns()
+                with self.lock:
+                    # get arrival times of the same message
+                    # creating empty list if none seen so far
+                    ts = self.recent_outputs[m]
+                    while len(ts):
+                        # process oldest first
+                        age = t - ts.pop(0)
+                        # if one is recent enough, return from callback
+                        # anything older than threshold just gets dropped
+                        if age<self.max_feedback_ns:
+                            if self.verbose > 2:
+                                print(f'suppressing MIDI feedback {msg} {age=}')
+                            return
+                    
             # check each handler 
             for filters, f in self.handlers:
                 filters = {**filters}
@@ -241,8 +255,12 @@ class MIDI:
                     try:
                         f(msg, port_name)
                     except TypeError:
-                        f(msg)
-                    except Exception as e:
+                        try:
+                            f(msg)
+                        except Exception:
+                            print(f'error in MIDI handler {f}:')
+                            traceback.print_exc()
+                    except Exception:
                         print(f'error in MIDI handler {f}:')
                         traceback.print_exc()
                     if self.verbose>1: print(f'exit handler function {f}')
@@ -260,7 +278,9 @@ class MIDI:
             # iiuc mido send should already be thread safe
             # with _lock:
             p.send(m)
-            self.recent_outputs[m].append(t)
+            if self.suppress_feedback:
+                with self.lock:
+                    self.recent_outputs[m].append(t)
 
 
     # # see https://mido.readthedocs.io/en/latest/message_types.html
