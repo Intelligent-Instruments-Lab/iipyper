@@ -212,7 +212,8 @@ class MIDI:
             # 128 * 16 * 128 is just in the 100k range
             if self.suppress_feedback:
                 # freeze message so it can be a dict key
-                m = freeze_message(msg)
+                # m = freeze_message(msg)
+                m = self.msg_to_fbs_key(msg)
                 t = time.time_ns()
                 with self.lock:
                     # get arrival times of the same message
@@ -230,7 +231,7 @@ class MIDI:
                     
             # check each handler 
             for filters, f in self.handlers:
-                filters = {**filters}
+                filters = filters.copy()
                 # print(port_name, f'{filters=}')
                 # check port
                 use_handler = (
@@ -250,8 +251,11 @@ class MIDI:
                 # call the handler if it passes the filter
                 if not use_handler:
                     continue
+                # if self.verbose>1: print(f'enter handler function {f} {msg=}', flush=True)
+                # f(msg) ### DEBUG
+                # if self.verbose>1: print(f'exit handler function {f}', flush=True)
                 with _lock:
-                    if self.verbose>1: print(f'enter handler function {f}')
+                    if self.verbose>1: print(f'enter handler function {f} {msg=}')
                     try:
                         f(msg, port_name)
                     except TypeError:
@@ -266,13 +270,23 @@ class MIDI:
                     if self.verbose>1: print(f'exit handler function {f}')
 
         return callback
+    
+    def msg_to_fbs_key(self, msg):
+        # treat note on with velocity 0 as a note off
+        # for purposes of feedback suppression,
+        # in case external hardware converts between them
+        if msg.type == 'note_on' and msg.velocity == 0:
+            msg = mido.Message(
+                type='note_off', channel=msg.channel, note=msg.note, 
+                time=0, velocity=0)
+        return freeze_message(msg)
 
     def _send_msg(self, port, m):
         """send on a specific port or all output ports"""
         ports = self.out_ports.values() if port is None else [self.out_ports[port]]
         # print(ports)
         t = time.time_ns()
-        m = freeze_message(m)
+        # m = freeze_message(m)
         for p in ports:
             # print('iipyper send', m)
             # iiuc mido send should already be thread safe
@@ -280,7 +294,8 @@ class MIDI:
             p.send(m)
             if self.suppress_feedback:
                 with self.lock:
-                    self.recent_outputs[m].append(t)
+                    self.recent_outputs[self.msg_to_fbs_key(m)].append(t)
+                    # self.recent_outputs[m].append(t)
 
 
     # # see https://mido.readthedocs.io/en/latest/message_types.html
