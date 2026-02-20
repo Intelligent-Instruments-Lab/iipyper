@@ -1,5 +1,6 @@
 import os
 import functools as ft
+from queue import Queue
 import time
 import traceback
 from typing import Optional, List, Union
@@ -94,7 +95,8 @@ class MIDI:
         # MIDI feedback suppression stuff
         self.suppress_feedback = suppress_feedback
         # map from MIDI event to list of timestamps
-        self.recent_outputs = defaultdict(list)
+        # self.recent_outputs = defaultdict(list)
+        self.recent_outputs = defaultdict(Queue)
         self.max_feedback_ns = suppress_feedback_window * 1e9
 
         self.lock = Lock()
@@ -219,9 +221,11 @@ class MIDI:
                     # get arrival times of the same message
                     # creating empty list if none seen so far
                     ts = self.recent_outputs[m]
-                    while len(ts):
+                    # while len(ts):
+                    while not ts.empty():
                         # process oldest first
-                        age = t - ts.pop(0)
+                        # age = t - ts.pop(0)
+                        age = t - ts.get()
                         # if one is recent enough, return from callback
                         # anything older than threshold just gets dropped
                         if age<self.max_feedback_ns:
@@ -294,7 +298,8 @@ class MIDI:
             p.send(m)
             if self.suppress_feedback:
                 with self.lock:
-                    self.recent_outputs[self.msg_to_fbs_key(m)].append(t)
+                    # self.recent_outputs[self.msg_to_fbs_key(m)].append(t)
+                    self.recent_outputs[self.msg_to_fbs_key(m)].put(t)
                     # self.recent_outputs[m].append(t)
 
 
