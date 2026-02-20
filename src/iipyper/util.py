@@ -10,7 +10,7 @@ class profile:
     """simple timing profiler as a decorator or context manager"""
     depth = 0
     printed_depth = 0
-    def __init__(self, label=None, print=print, enable=True):
+    def __init__(self, label=None, print=print, enable=1):
         self.label = label
         self.print = print
         self.enable = enable

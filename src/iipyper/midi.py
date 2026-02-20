@@ -3,7 +3,6 @@ import functools as ft
 from queue import Queue
 import time
 import traceback
-from typing import Optional, List, Union
 from collections import defaultdict
 from threading import Lock
 
@@ -43,18 +42,18 @@ class MIDI:
     @classmethod
     def print_ports(cls):
         print('Available MIDI inputs:')
-        for s in set(mido.get_input_names()):
+        for s in set(mido.get_input_names()): #type:ignore
             print(f'\t{s}') 
         print('Available MIDI outputs:')
-        for s in set(mido.get_output_names()):
+        for s in set(mido.get_output_names()): #type:ignore
             print(f'\t{s}')
         MIDI.ports_printed = True
 
     ports_printed = False
 
     def __init__(self, 
-        in_ports:List[str]|str|None=None, 
-        out_ports:List[str]|str|None=None, 
+        in_ports:list[str]|str|None=None, 
+        out_ports:list[str]|str|None=None, 
         virtual_in_ports:int=1, virtual_out_ports:int=1, 
         suppress_feedback:bool=True,
         suppress_feedback_window:float=1e-3,
@@ -90,7 +89,8 @@ class MIDI:
         # TODO: fuzzy match port names
 
         if in_ports is None or len(in_ports)==0:
-            in_ports = set(mido.get_input_names())
+            in_ports = set(mido.get_input_names())#type:ignore
+        assert in_ports is not None
 
         # MIDI feedback suppression stuff
         self.suppress_feedback = suppress_feedback
@@ -105,15 +105,16 @@ class MIDI:
         for port in in_ports:
             cb = self.get_callback(port)
             try:
-                self.in_ports[port] = mido.open_input(port, callback=cb)
+                self.in_ports[port] = mido.open_input( #type:ignore
+                    port, callback=cb)
             except Exception:
                 print(f"""WARNING: failed to open MIDI input {port}""")
         for i in range(virtual_in_ports):
             port = f'To iipyper {i+1}'
             cb = self.get_callback(port)
             try:
-                self.in_ports[port] = mido.open_input(
-                    port, virtual=True, callback=cb)
+                self.in_ports[port] = mido.open_input( #type:ignore
+                    port, virtual=True, callback=cb) 
             except Exception: print(
                 f'WARNING: iipyper: failed to open virtual MIDI port {port}')
 
@@ -124,7 +125,8 @@ class MIDI:
         for i in range(virtual_out_ports):
             port = f'From iipyper {i+1}'
             try:
-                self.out_ports[port] = mido.open_output(port, virtual=True)
+                self.out_ports[port] = mido.open_output(#type:ignore
+                    port, virtual=True)
             except Exception: print(
                 f'WARNING: iipyper: failed to open virtual MIDI port {port}')
 
@@ -132,7 +134,8 @@ class MIDI:
             out_ports = []
         for port in out_ports:
             try:
-                self.out_ports[port] = mido.open_output(port)
+                self.out_ports[port] = mido.open_output(#type:ignore
+                    port)
             except Exception:
                 print(f"""WARNING: MIDI output {port} not found""")
 
@@ -305,7 +308,7 @@ class MIDI:
 
     # # see https://mido.readthedocs.io/en/latest/message_types.html
 
-    def send(self, m:Union[str,mido.Message], *a, port:Optional[str]=None, **kw):
+    def send(self, m:str|mido.Message, *a, port:str|None=None, **kw):
         """
         send a mido message as MIDI. 
         
@@ -326,14 +329,14 @@ class MIDI:
         if isinstance(m, mido.Message):
             self._send_msg(port, m)
             # mido crashes if channel is a np.int8
-            m.channel = int(m.channel)
+            m.channel = int(m.channel) #type:ignore
             if len(a)+len(kw) > 0:
                 print('warning: extra arguments to MIDI send')
         elif isinstance(m, str):
             try:
                 m = mido.Message(m, *a, **kw)
                 # mido crashes if channel is a np.int8
-                m.channel = int(m.channel)
+                m.channel = int(m.channel) #type:ignore
                 self._send_msg(port, m)
             except Exception:
                 print('MIDI send failed: bad arguments to mido.Message')
