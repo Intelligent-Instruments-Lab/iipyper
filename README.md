@@ -21,7 +21,6 @@ git clone git@github.com:Intelligent-Instruments-Lab/iipyper.git
 cd iipyper
 uv lock
 uv sync
-uv pip install -e .
 ```
 
 ## Contact
