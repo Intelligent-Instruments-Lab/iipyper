@@ -19,7 +19,9 @@ pip install iipyper
 ```sh
 git clone git@github.com:Intelligent-Instruments-Lab/iipyper.git
 cd iipyper
-poetry install iipyper
+uv lock
+uv sync
+uv pip install -e .
 ```
 
 ## Contact
